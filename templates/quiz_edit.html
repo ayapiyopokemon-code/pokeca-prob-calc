@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}{{ '問題を編集' if question else '新しい問題' }} | ポケカ確率計算{% endblock %}
+
+{% block nav_right %}
+<a href="/quiz" class="btn btn-outline-secondary btn-sm">← 問題一覧</a>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:720px">
+  <h1 class="deck-calc-title mb-4">
+    {{ '✏️ 問題を編集' if question else '🆕 新しい問題を作る' }}
+  </h1>
+
+  <form method="POST"
+        action="{{ '/quiz/' ~ question.id ~ '/update' if question else '/quiz/create' }}">
+
+    <!-- タイトル -->
+    <div class="panel-box mb-3">
+      <h2 class="panel-title">📝 問題のタイトル</h2>
+      <input type="text" name="title" class="form-control form-control-lg"
+             placeholder="例：サポート選択問題①"
+             value="{{ question.title if question else '' }}" required>
+    </div>
+
+    <!-- シナリオ -->
+    <div class="panel-box mb-3">
+      <h2 class="panel-title">📖 シナリオ（問題文）</h2>
+      <textarea name="scenario" class="form-control" rows="4"
+                placeholder="例：あなたの番です。山札残り20枚、サイドは残り3枚。相手のHPは残りわずかです。次のターンで勝負が決まりそうです。どのサポートカードからプレイしますか？">{{ question.scenario if question else '' }}</textarea>
+    </div>
+
+    <!-- ゲーム状態 -->
+    <div class="panel-box mb-3">
+      <h2 class="panel-title">🎮 ゲームの状態</h2>
+      <div class="row g-3">
+        <div class="col-6 col-sm-3">
+          <label class="form-label fw-bold small">山札残り枚数</label>
+          <input type="number" name="deck_remaining" class="form-control text-center"
+                 value="{{ question.deck_remaining if question else 20 }}" min="1" max="60">
+        </div>
+        <div class="col-6 col-sm-3">
+          <label class="form-label fw-bold small">サイド残り枚数</label>
+          <input type="number" name="side_remaining" class="form-control text-center"
+                 value="{{ question.side_remaining if question else 3 }}" min="0" max="6">
+        </div>
+        <div class="col-8 col-sm-4">
+          <label class="form-label fw-bold small">勝ちすじカード名</label>
+          <input type="text" name="win_card_name" class="form-control"
+                 placeholder="例：ドラパルトex"
+                 value="{{ question.win_card_name if question else '' }}">
+        </div>
+        <div class="col-4 col-sm-2">
+          <label class="form-label fw-bold small">山札内残り</label>
+          <input type="number" name="win_card_count" class="form-control text-center"
+                 value="{{ question.win_card_count if question else 2 }}" min="0" max="20">
+        </div>
+      </div>
+    </div>
+
+    <!-- 選択肢 -->
+    <div class="panel-box mb-3">
+      <h2 class="panel-title">🃏 選択肢（2〜4個）</h2>
+      <p class="text-muted small mb-3">
+        各カードを使った後に見られる枚数を入力してください。
+        <br>サーチ（=狙った1枚を確実に選べる）の場合はチェックを入れてください。
+      </p>
+
+      {% set choice_labels = ['A', 'B', 'C', 'D'] %}
+      {% for idx in range(4) %}
+      {% set ci = idx + 1 %}
+      {% set c = choices[idx] if choices and idx < choices|length else none %}
+      <div class="quiz-choice-row {% if idx == 0 %}quiz-choice-required{% endif %}" id="choiceRow{{ ci }}">
+        <div class="quiz-choice-label">選択肢 {{ choice_labels[idx] }}</div>
+        <div class="row g-2 align-items-start">
+          <div class="col-12 col-sm-5">
+            <label class="form-label small fw-bold">カード名</label>
+            <input type="text" name="choice_{{ ci }}_name" class="form-control"
+                   placeholder="例：アクロマの執念"
+                   value="{{ c.card_name if c else '' }}"
+                   {% if ci <= 2 %}required{% endif %}>
+          </div>
+          <div class="col-5 col-sm-2">
+            <label class="form-label small fw-bold">見られる枚数</label>
+            <input type="number" name="choice_{{ ci }}_draw" class="form-control text-center"
+                   value="{{ c.draw_count if c else 3 }}" min="1" max="60">
+          </div>
+          <div class="col-7 col-sm-3 d-flex align-items-end pb-1">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox"
+                     name="choice_{{ ci }}_search" value="1"
+                     id="search{{ ci }}"
+                     {% if c and c.is_search %}checked{% endif %}>
+              <label class="form-check-label small" for="search{{ ci }}">
+                サーチ（確実に選べる）
+              </label>
+            </div>
+          </div>
+          <div class="col-12 col-sm-2 d-flex align-items-end">
+            {% if ci >= 3 %}
+            <button type="button" class="btn btn-sm btn-outline-secondary w-100"
+                    onclick="clearChoice({{ ci }})">✕ 消す</button>
+            {% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-bold">カード効果メモ（任意）</label>
+            <input type="text" name="choice_{{ ci }}_memo" class="form-control form-control-sm"
+                   placeholder="例：山札から5枚引く"
+                   value="{{ c.memo if c else '' }}">
+          </div>
+        </div>
+      </div>
+      {% if idx < 3 %}<hr class="my-3">{% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- 正解と解説 -->
+    <div class="panel-box mb-4">
+      <h2 class="panel-title">✅ 正解と解説</h2>
+      <div class="mb-3">
+        <label class="form-label fw-bold">正解の選択肢</label>
+        <div class="d-flex gap-2 flex-wrap">
+          {% for ci in [1, 2, 3, 4] %}
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="correct_choice"
+                   value="{{ ci }}" id="correct{{ ci }}"
+                   {% if question and question.correct_choice == ci %}checked
+                   {% elif not question and ci == 1 %}checked{% endif %}>
+            <label class="form-check-label fw-bold" for="correct{{ ci }}">
+              選択肢 {{ ['A','B','C','D'][ci-1] }}
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div>
+        <label class="form-label fw-bold">解説</label>
+        <textarea name="explanation" class="form-control" rows="4"
+                  placeholder="なぜその選択が正解なのか、確率的な根拠を書いてください">{{ question.explanation if question else '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-pokeca-main px-5">
+        {{ '💾 更新する' if question else '✅ 問題を作成' }}
+      </button>
+      <a href="/quiz" class="btn btn-outline-secondary px-4">キャンセル</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function clearChoice(num) {
+  const row = document.getElementById('choiceRow' + num);
+  row.querySelectorAll('input[type="text"]').forEach(el => el.value = '');
+  row.querySelectorAll('input[type="number"]').forEach(el => el.value = el.defaultValue);
+  row.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+}
+</script>
+{% endblock %}

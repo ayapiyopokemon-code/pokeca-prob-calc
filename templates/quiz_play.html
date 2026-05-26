@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}{{ q.title }} | ポケカ確率計算{% endblock %}
+
+{% block nav_right %}
+<div class="d-flex gap-2">
+  <a href="/quiz/{{ q.id }}/edit" class="btn btn-outline-secondary btn-sm">✏️ 編集</a>
+  <a href="/quiz" class="btn btn-outline-secondary btn-sm">← 一覧</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:680px">
+
+  <!-- 問題ヘッダー -->
+  <div class="quiz-play-header mb-3">
+    <span class="quiz-play-num">#{{ q.id }}</span>
+    <h1 class="quiz-play-title">{{ q.title }}</h1>
+  </div>
+
+  <!-- シナリオ -->
+  <div class="panel-box quiz-scenario mb-3">
+    <div class="quiz-scenario__icon">📖</div>
+    <p class="quiz-scenario__text">{{ q.scenario }}</p>
+  </div>
+
+  <!-- ゲーム状態 -->
+  <div class="quiz-state-row mb-4">
+    <div class="quiz-state-box">
+      <div class="quiz-state-label">山札残り</div>
+      <div class="quiz-state-val">{{ q.deck_remaining }}<span class="quiz-state-unit">まい</span></div>
+    </div>
+    <div class="quiz-state-box">
+      <div class="quiz-state-label">サイド残り</div>
+      <div class="quiz-state-val">{{ q.side_remaining }}<span class="quiz-state-unit">まい</span></div>
+    </div>
+    {% if q.win_card_name %}
+    <div class="quiz-state-box quiz-state-box--win">
+      <div class="quiz-state-label">🎯 勝ちすじカード</div>
+      <div class="quiz-state-val quiz-win-card">
+        {{ q.win_card_name }}
+        <span class="quiz-win-count">× {{ q.win_card_count }}</span>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- 選択肢ボタン -->
+  <div id="choiceSection">
+    <p class="fw-bold mb-2">どのカードからプレイしますか？</p>
+    <div class="quiz-choices" id="choiceButtons">
+      {% set labels = ['A', 'B', 'C', 'D'] %}
+      {% for c in choices %}
+      <button class="quiz-choice-btn" data-idx="{{ loop.index0 }}"
+              onclick="answer({{ loop.index0 }})">
+        <span class="quiz-choice-btn__label">{{ labels[loop.index0] }}</span>
+        <span class="quiz-choice-btn__name">{{ c.card_name }}</span>
+        {% if c.memo %}
+        <span class="quiz-choice-btn__memo">{{ c.memo }}</span>
+        {% endif %}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- 結果エリア（回答後に表示） -->
+  <div id="resultSection" class="d-none mt-4">
+
+    <!-- 正解/不正解バナー -->
+    <div id="resultBanner" class="quiz-result-banner mb-4"></div>
+
+    <!-- 各選択肢の確率比較 -->
+    <div class="panel-box mb-3">
+      <h2 class="panel-title">📊 各選択肢の確率比較</h2>
+      <p class="text-muted small mb-3">
+        山札 {{ q.deck_remaining }}枚 ／ 勝ちすじカード {{ q.win_card_count }}枚
+        ── 次のドロー・サーチで引ける確率
+      </p>
+      {% for c in choices %}
+      {% set p = probs[loop.index0] %}
+      {% set is_correct = loop.index == q.correct_choice %}
+      <div class="quiz-prob-row {% if is_correct %}quiz-prob-row--correct{% endif %}"
+           id="probRow{{ loop.index0 }}">
+        <div class="quiz-prob-label">
+          <span class="quiz-prob-choice-label">{{ labels[loop.index0] }}</span>
+          <span class="quiz-prob-name">{{ c.card_name }}</span>
+          {% if c.is_search %}
+          <span class="quiz-prob-search-badge">サーチ</span>
+          {% endif %}
+          {% if is_correct %}
+          <span class="quiz-prob-correct-badge">✅ 正解</span>
+          {% endif %}
+        </div>
+        <div class="quiz-prob-detail">
+          {{ c.draw_count }}枚{{ 'から選べる' if c.is_search else 'ドロー' }}
+          {% if c.memo %} ／ {{ c.memo }}{% endif %}
+        </div>
+        <div class="quiz-prob-bar-wrap">
+          <div class="quiz-prob-bar" style="width:{{ p }}%;
+               background:{{ '#28a745' if p >= 75 else '#ffc107' if p >= 50 else '#dc3545' }}">
+          </div>
+          <span class="quiz-prob-pct">{{ p }}%</span>
+        </div>
+        {% if c.is_search %}
+        <div class="quiz-prob-search-note">
+          ※ サーチなので、確率が1%以上あれば<strong>確実に</strong>そのカードを手に入れられます
+        </div>
+        {% endif %}
+      </div>
+      {% if not loop.last %}<hr class="my-2">{% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- 解説 -->
+    {% if q.explanation %}
+    <div class="panel-box mb-4">
+      <h2 class="panel-title">💡 解説</h2>
+      <p class="quiz-explanation">{{ q.explanation }}</p>
+    </div>
+    {% endif %}
+
+    <!-- ナビゲーション -->
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn btn-pokeca-main px-4" onclick="retry()">🔄 もう一度考える</button>
+      <a href="/quiz/new" class="btn btn-outline-secondary px-4">＋ 問題を作る</a>
+      <a href="/quiz" class="btn btn-outline-secondary px-4">← 一覧へ</a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CORRECT = {{ q.correct_choice }};  // 1-based
+const LABELS  = ['A', 'B', 'C', 'D'];
+
+function answer(idx) {
+  const chosen  = idx + 1;  // 1-based
+  const correct = CORRECT;
+  const isRight = chosen === correct;
+
+  // ボタンを押せなくする＋視覚フィードバック
+  document.querySelectorAll('.quiz-choice-btn').forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === idx)           btn.classList.add(isRight ? 'quiz-choice-btn--correct' : 'quiz-choice-btn--wrong');
+    if (i === correct - 1)  btn.classList.add('quiz-choice-btn--correct');
+  });
+
+  // 結果バナー
+  const banner = document.getElementById('resultBanner');
+  if (isRight) {
+    banner.innerHTML = `<div class="quiz-banner-correct">🎉 正解！ 選択肢 ${LABELS[idx]} が最善手です！</div>`;
+  } else {
+    banner.innerHTML = `<div class="quiz-banner-wrong">
+      ❌ 不正解… 選択肢 ${LABELS[idx]} を選びました。<br>
+      正解は <strong>選択肢 ${LABELS[correct - 1]}</strong> でした。
+    </div>`;
+  }
+
+  // 確率バーのアニメーション（少し遅らせて表示）
+  document.getElementById('resultSection').classList.remove('d-none');
+  document.querySelectorAll('.quiz-prob-bar').forEach(bar => {
+    const target = bar.style.width;
+    bar.style.width = '0';
+    setTimeout(() => { bar.style.width = target; }, 50);
+  });
+
+  // 選んだ行をハイライト
+  const rows = document.querySelectorAll('.quiz-prob-row');
+  if (rows[idx]) rows[idx].classList.add('quiz-prob-row--chosen');
+
+  // スクロール
+  setTimeout(() => {
+    document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+function retry() {
+  // ボタンをリセット
+  document.querySelectorAll('.quiz-choice-btn').forEach(btn => {
+    btn.disabled = false;
+    btn.classList.remove('quiz-choice-btn--correct', 'quiz-choice-btn--wrong');
+  });
+  // 確率バーをリセット
+  document.querySelectorAll('.quiz-prob-bar').forEach(bar => { bar.style.width = '0'; });
+  document.querySelectorAll('.quiz-prob-row').forEach(row => row.classList.remove('quiz-prob-row--chosen'));
+  // 結果を隠す
+  document.getElementById('resultSection').classList.add('d-none');
+  document.getElementById('resultBanner').innerHTML = '';
+  // 上にスクロール
+  document.getElementById('choiceSection').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,852 @@
+{% extends "base.html" %}
+{% block title %}{{ deck.name }} | 確率計算{% endblock %}
+
+{% block nav_right %}
+<div class="d-flex align-items-center gap-2">
+  <a href="/deck/{{ deck.id }}/edit" class="btn btn-outline-secondary btn-sm">✏️ デッキを編集</a>
+  <span class="deck-count-badge {% if total == 60 %}badge-ok{% else %}badge-short{% endif %} fs-6">
+    {{ total }} / 60
+  </span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <h1 class="deck-calc-title mb-1">📊 {{ deck.name }}</h1>
+  <p class="text-muted mb-4">調べたいカードを選んでタップ！確率がわかるよ</p>
+
+  {% if total == 0 %}
+  <div class="empty-state">
+    <div class="empty-icon">🃏</div>
+    <p class="empty-text">デッキにカードが入っていません</p>
+    <a href="/deck/{{ deck.id }}/edit" class="btn btn-pokeca-main">デッキを編集する</a>
+  </div>
+  {% else %}
+
+  <!-- ===== ゲーム開始シミュレーター ===== -->
+  <div class="panel-box mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h2 class="panel-title mb-0">🎮 ゲーム開始シミュレーター</h2>
+      <button class="btn btn-sm btn-outline-secondary" id="btnToggleSim" type="button">▲ たたむ</button>
+    </div>
+
+    <div id="simContent">
+      <!-- Stats row -->
+      <div class="sim-stats-row mb-3">
+        <div class="sim-stat-box">
+          <div class="sim-stat-label">たねポケモン</div>
+          <div class="sim-stat-val" id="statBasic">--まい</div>
+        </div>
+        <div class="sim-stat-box">
+          <div class="sim-stat-label">初手に引ける確率</div>
+          <div class="sim-stat-val" id="statProb">--%</div>
+        </div>
+        <div class="sim-stat-box">
+          <div class="sim-stat-label">マリガン確率</div>
+          <div class="sim-stat-val" id="statMulligan">--%</div>
+        </div>
+      </div>
+
+      <!-- 先攻/後攻 選択 -->
+      <div class="sim-turn-select mb-3">
+        <span class="sim-turn-label">先攻 / 後攻：</span>
+        <div class="btn-group sim-turn-group" role="group" aria-label="先攻後攻">
+          <button type="button" class="btn sim-btn-turn sim-btn-first active" id="btnFirst">
+            🥇 先攻
+          </button>
+          <button type="button" class="btn sim-btn-turn sim-btn-second" id="btnSecond">
+            🥈 後攻
+          </button>
+        </div>
+        <span class="sim-turn-note" id="turnNote">先攻は1ターン目にワザが使えない</span>
+      </div>
+
+      <!-- Field mat -->
+      <div class="sim-mat">
+        <div class="sim-side-label">▲ 相手のフィールド（省略）</div>
+        <div class="sim-divider"></div>
+
+        <!-- Row 1: Prize | Center (Pokéball+Active) | Deck -->
+        <div class="sim-field-top">
+          <!-- Prize cards: 2×3 grid -->
+          <div>
+            <div class="sim-zlabel">サイド 6まい</div>
+            <div class="sim-prize-grid" id="prizeGrid">
+              <div class="sim-slot sim-slot--prize"></div>
+              <div class="sim-slot sim-slot--prize"></div>
+              <div class="sim-slot sim-slot--prize"></div>
+              <div class="sim-slot sim-slot--prize"></div>
+              <div class="sim-slot sim-slot--prize"></div>
+              <div class="sim-slot sim-slot--prize"></div>
+            </div>
+          </div>
+
+          <!-- Center: Pokéball + Active slot -->
+          <div class="sim-center-col">
+            <div class="sim-pokeball"></div>
+            <div class="sim-zlabel">バトル場</div>
+            <div class="sim-slot sim-slot--active" id="activeSlot">
+              <span class="sim-slot-hint">たね<br>ポケモン</span>
+            </div>
+          </div>
+
+          <!-- Deck -->
+          <div class="sim-deck-col">
+            <div class="sim-zlabel">デッキ</div>
+            <div class="sim-deck-wrap">
+              <div class="sim-cback sim-cback--deck">
+                <div class="sim-deck-count" id="deckCount">--</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Bench (5 slots) -->
+        <div class="mb-2">
+          <div class="sim-zlabel">ベンチ（5スロット）</div>
+          <div class="sim-bench-row" id="benchRow">
+            <div class="sim-slot sim-slot--bench"></div>
+            <div class="sim-slot sim-slot--bench"></div>
+            <div class="sim-slot sim-slot--bench"></div>
+            <div class="sim-slot sim-slot--bench"></div>
+            <div class="sim-slot sim-slot--bench"></div>
+          </div>
+        </div>
+
+        <!-- Row 3: Hand -->
+        <div>
+          <div class="sim-zlabel">てふだ <span id="handLabel"></span></div>
+          <div class="sim-hand-row" id="handRow">
+            <p class="sim-hand-hint">🎲 下の「シミュレーション開始」を押してね！</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="sim-controls-row mt-3">
+        <button class="btn btn-pokeca-main px-4" id="btnSimStart">🎲 シミュレーション開始</button>
+        <button class="btn btn-success px-4 d-none" id="btnBattleStart">⚔️ バトル開始！</button>
+        <button class="btn btn-warning px-4 d-none" id="btnMulligan">🔄 マリガン</button>
+        <button class="btn btn-outline-secondary d-none" id="btnSimReset">↩ リセット</button>
+      </div>
+      <div id="simStatus" class="sim-status-msg mt-2"></div>
+    </div>
+  </div>
+  <!-- ===== /シミュレーター ===== -->
+
+  <div class="row g-4">
+
+    <!-- 左: カード選択 -->
+    <div class="col-12 col-lg-5">
+      <div class="panel-box">
+        <h2 class="panel-title">🃏 調べるカードを選ぶ</h2>
+        <p class="text-muted small mb-3">カードをタップすると確率を計算します</p>
+
+        {% set groups = [
+          ('ポケモン', 'Pokémon'),
+          ('トレーナーズ', 'Trainer'),
+          ('エネルギー', 'Energy'),
+        ] %}
+        {% for jp_name, en_name in groups %}
+        {% set group_cards = cards | selectattr('supertype', 'equalto', en_name) | list %}
+        {% if group_cards %}
+        <div class="mb-3">
+          <div class="card-group-header">
+            <span>{{ jp_name }}</span>
+            <span class="badge bg-secondary ms-1">{{ group_cards | sum(attribute='quantity') }}</span>
+          </div>
+          <div class="calc-card-grid">
+            {% for c in group_cards %}
+            <div class="calc-card-tile" data-card-id="{{ c.card_id }}"
+                 data-card-name="{{ c.card_name }}" data-copies="{{ c.quantity }}">
+              {% if c.image_small %}
+              <img src="{{ c.image_small }}" alt="{{ c.card_name }}" loading="lazy">
+              {% else %}
+              <div class="calc-card-tile__noimg">🃏</div>
+              {% endif %}
+              <div class="calc-card-tile__name">{{ c.card_name }}</div>
+              <div class="calc-card-tile__copies">{{ c.quantity }}まい</div>
+              <div class="calc-card-tile__check">✓</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 右: 結果 -->
+    <div class="col-12 col-lg-7">
+
+      <!-- 状況入力 -->
+      <div class="panel-box mb-3">
+        <h2 class="panel-title">🎮 いまのじょうきょう</h2>
+        <div class="row g-3 align-items-center">
+          <div class="col-6">
+            <label class="form-label fw-bold">
+              山札の残り枚数
+              <span class="text-muted fw-normal small">（いまの山札）</span>
+            </label>
+            <div class="deck-remain-wrap">
+              <button class="btn btn-outline-secondary deck-remain-btn" id="btnDeckMinus" type="button">−</button>
+              <input type="number" id="deckRemain" class="form-control form-control-lg text-center deck-remain-input"
+                     value="{{ total }}" min="1" max="60">
+              <button class="btn btn-outline-secondary deck-remain-btn" id="btnDeckPlus" type="button">＋</button>
+            </div>
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-bold">
+              追加でひくまい
+              <span class="text-muted fw-normal small">（このターン）</span>
+            </label>
+            <div class="deck-remain-wrap">
+              <button class="btn btn-outline-secondary deck-remain-btn" id="btnDrawnMinus" type="button">−</button>
+              <input type="number" id="drawnCount" class="form-control form-control-lg text-center deck-remain-input"
+                     value="0" min="0" max="59">
+              <button class="btn btn-outline-secondary deck-remain-btn" id="btnDrawnPlus" type="button">＋</button>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+          <p class="text-muted small mb-0">
+            ※ シミュレーター実行後は自動で更新されます。手動でも変更できます。
+          </p>
+          <button class="btn btn-sm btn-outline-secondary" id="btnDeckReset" type="button">
+            🔄 リセット
+          </button>
+        </div>
+      </div>
+
+      <!-- 結果エリア -->
+      <div id="resultArea">
+        <div class="result-placeholder">
+          <div class="fs-1 mb-2">👈</div>
+          <p class="fw-bold">左のカードをタップすると<br>確率が表示されます</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- 確率結果テンプレート（JS用） -->
+<template id="resultTemplate">
+  <div class="result-card mb-4">
+    <div class="result-card__header">
+      <img class="result-card__img" src="" alt="">
+      <div class="result-card__info">
+        <div class="result-card__name"></div>
+        <div class="result-card__copies text-muted small"></div>
+      </div>
+      <button class="result-card__close">✕</button>
+    </div>
+
+    <!-- はじめの7まい -->
+    <div class="prob-highlight">
+      <div class="prob-highlight__label">はじめの7まいで引ける確率</div>
+      <div class="prob-highlight__pct"></div>
+      <div class="prob-highlight__bar">
+        <div class="prob-bar-fill"></div>
+      </div>
+      <div class="prob-highlight__words"></div>
+    </div>
+
+    <!-- ターンごとのグラフ -->
+    <div class="mt-3">
+      <div class="fw-bold mb-2 small">ターンが進むほど引きやすくなる📈</div>
+      <canvas class="turn-chart" height="180"></canvas>
+    </div>
+  </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const DECK_ID    = {{ deck.id }};
+const DECK_TOTAL = {{ total }};
+
+// ============================================================
+// ゲーム開始シミュレーター
+// ============================================================
+(function () {
+  const CARDS_RAW = {{ cards | tojson }};
+  const N = DECK_TOTAL;
+
+  const EVOLVE_MARKS = ['1進化', '2進化', 'Stage 1', 'Stage 2', 'RESTORED'];
+
+  // 展開デッキ（1枚1オブジェクト）
+  const FULL_DECK = [];
+  CARDS_RAW.forEach(card => {
+    const st = String(card.subtypes || '');
+    const isBasic = card.supertype === 'Pokémon' &&
+      !EVOLVE_MARKS.some(m => st.includes(m));
+    for (let i = 0; i < card.quantity; i++) {
+      FULL_DECK.push({
+        key:     card.card_id + '_' + i,
+        name:    card.card_name,
+        stype:   card.supertype,
+        img:     card.image_small,
+        isBasic,
+      });
+    }
+  });
+
+  // ---- 確率計算（超幾何分布）----
+  function logComb(n, k) {
+    if (k < 0 || k > n) return -Infinity;
+    let v = 0;
+    for (let i = 0; i < k; i++) v += Math.log(n - i) - Math.log(i + 1);
+    return v;
+  }
+  function probAtLeastOne(total, success, draw) {
+    if (success === 0) return 0;
+    return 1 - Math.exp(logComb(total - success, draw) - logComb(total, draw));
+  }
+
+  function renderStats() {
+    const basics = FULL_DECK.filter(c => c.isBasic).length;
+    const pct    = Math.round(probAtLeastOne(N, basics, 7) * 100);
+    const mulPct = 100 - pct;
+    document.getElementById('statBasic').textContent = basics + 'まい';
+    const probEl = document.getElementById('statProb');
+    probEl.textContent = pct + '%';
+    probEl.className   = 'sim-stat-val ' + (pct >= 80 ? 'sv-good' : pct >= 55 ? '' : 'sv-bad');
+    const mulEl = document.getElementById('statMulligan');
+    mulEl.textContent = mulPct + '%';
+    mulEl.className   = 'sim-stat-val ' + (mulPct <= 5 ? 'sv-good' : mulPct <= 20 ? 'sv-warn' : 'sv-bad');
+  }
+
+  // ---- シャッフル ----
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ---- 状態 ----
+  let turnOrder     = 'first'; // 'first'=先攻 | 'second'=後攻
+  let mulliganCount = 0;
+  let simPhase      = 'idle'; // 'idle' | 'pickActive' | 'selecting' | 'done'
+  let simDeck       = [];
+  let currentHand   = [];
+  let benchSelected = []; // バトル場以外でベンチに置くカード
+
+  // ---- メインシミュレーション ----
+  function runSim(isRetry) {
+    if (!isRetry) mulliganCount = 0;
+    simPhase = 'idle';
+
+    const deck  = shuffle(FULL_DECK);
+    const hand  = deck.splice(0, 7);
+    const basics = hand.filter(c => c.isBasic);
+
+    document.getElementById('btnSimReset').classList.remove('d-none');
+    document.getElementById('btnBattleStart').classList.add('d-none');
+
+    if (basics.length === 0) {
+      mulliganCount++;
+      doMulligan(hand);
+      return;
+    }
+
+    document.getElementById('btnMulligan').classList.add('d-none');
+
+    // 状態保存（バトル場は未決定）
+    currentHand   = hand;   // 全7枚
+    benchSelected = [];
+    simDeck       = deck;
+    simPhase      = 'pickActive'; // まずバトル場を選ぶ
+
+    // 描画
+    resetActive();
+    resetBench();
+    placePrizes(0);
+    setDeckCount('--');
+    renderHandPickActive();
+
+    setStatus(
+      '🎯 <b>バトル場</b>に出すたねポケモンを選んでください（オレンジ枠のカードをタップ）',
+      'text-warning'
+    );
+  }
+
+  // ---- バトル場選択モードで手札を描画 ----
+  function renderHandPickActive() {
+    const row = document.getElementById('handRow');
+    row.innerHTML = currentHand.map((c, i) => {
+      if (!c.isBasic) {
+        return makeFace(c, 'hand');
+      }
+      const imgHtml = c.img
+        ? `<img src="${c.img}" alt="${c.name}" loading="lazy">`
+        : `<div class="ni-icon">🃏</div><div class="ni-name">${c.name}</div>`;
+      return `<div class="sim-cface sim-cface--hand sim-cface--pickactive"
+                  title="${c.name}" onclick="window._simPickActive(${i})">
+                ${imgHtml}
+                <div class="sim-cface__name">${c.name}</div>
+                <div class="sim-bench-badge sim-bench-badge--active">🎯 バトル場へ</div>
+              </div>`;
+    }).join('');
+    document.getElementById('handLabel').textContent = `${currentHand.length}まい`;
+  }
+
+  // ---- バトル場選択（グローバル公開）----
+  window._simPickActive = function(idx) {
+    if (simPhase !== 'pickActive') return;
+    const card = currentHand[idx];
+    if (!card || !card.isBasic) return;
+
+    // バトル場へ配置、手札から除く
+    placeActive(card);
+    currentHand.splice(idx, 1);
+    benchSelected = [];
+    simPhase = 'selecting';
+
+    renderHandSelectable();
+    document.getElementById('btnBattleStart').classList.remove('d-none');
+
+    const basicInHand = currentHand.filter(c => c.isBasic).length;
+    if (basicInHand > 0) {
+      setStatus(
+        `✅ <b>${card.name}</b> をバトル場へ！<br>` +
+        '手札のポケモンをタップしてベンチへ（最大4体）。選び終わったら「⚔️ バトル開始！」を押してね',
+        'text-info'
+      );
+    } else {
+      setStatus(
+        `✅ <b>${card.name}</b> をバトル場へ！ 手札にベンチ要員はいません。「⚔️ バトル開始！」を押してね`,
+        'text-info'
+      );
+    }
+  };
+
+  // ---- ベンチ選択モードで手札を描画 ----
+  function renderHandSelectable() {
+    const row = document.getElementById('handRow');
+    const benchKeys = new Set(benchSelected.map(b => b.key));
+
+    row.innerHTML = currentHand.map((c, i) => {
+      if (!c.isBasic) {
+        // 非ポケモンは普通表示（選択不可）
+        return makeFace(c, 'hand');
+      }
+      const isBenched = benchKeys.has(c.key);
+      const imgHtml   = c.img
+        ? `<img src="${c.img}" alt="${c.name}" loading="lazy">`
+        : `<div class="ni-icon">🃏</div><div class="ni-name">${c.name}</div>`;
+      return `<div class="sim-cface sim-cface--hand ${isBenched ? 'sim-cface--benched' : 'sim-cface--selectable'}"
+                  title="${c.name}" onclick="window._simBenchToggle(${i})">
+                ${imgHtml}
+                <div class="sim-cface__name">${c.name}</div>
+                <div class="sim-bench-badge">${isBenched ? '✓ ベンチ中' : '＋ ベンチへ'}</div>
+              </div>`;
+    }).join('');
+
+    const bc = benchSelected.length;
+    document.getElementById('handLabel').textContent =
+      `${currentHand.length}まい ／ ベンチ選択: ${bc}/4`;
+  }
+
+  // ---- ベンチ選択トグル（グローバル公開）----
+  window._simBenchToggle = function(idx) {
+    if (simPhase !== 'selecting') return;
+    const card = currentHand[idx];
+    if (!card || !card.isBasic) return;
+
+    const pos = benchSelected.findIndex(b => b.key === card.key);
+    if (pos >= 0) {
+      benchSelected.splice(pos, 1); // ベンチから外す
+    } else if (benchSelected.length < 4) {
+      benchSelected.push(card);     // ベンチへ追加
+    } else {
+      return; // 4体満員
+    }
+
+    placeBench(benchSelected);
+    renderHandSelectable();
+
+    const bc  = benchSelected.length;
+    const rem = 4 - bc;
+    setStatus(
+      bc === 0
+        ? '手札のポケモンをタップしてベンチへ（最大4体）'
+        : `ベンチ <b>${bc}</b>体 選択中 — あと <b>${rem}</b>体置けます。準備ができたら「⚔️ バトル開始！」を押してね`,
+      'text-info'
+    );
+  };
+
+  // ---- バトル開始（サイド確定）----
+  function startBattle() {
+    if (simPhase !== 'selecting') return;
+    simPhase = 'done';
+
+    const benchKeys = new Set(benchSelected.map(b => b.key));
+    const finalHand = currentHand.filter(c => !benchKeys.has(c.key));
+
+    const prizes  = simDeck.splice(0, 6);
+    const deckLeft = simDeck.length;
+
+    placeHand(finalHand, false);
+    placePrizes(prizes.length);
+    setDeckCount(deckLeft);
+
+    document.getElementById('btnBattleStart').classList.add('d-none');
+
+    const mulMsg = mulliganCount > 0
+      ? `（マリガン ${mulliganCount} 回 ／ 相手は +${mulliganCount} まい引ける）`
+      : '';
+    const turnBadge = turnOrder === 'first'
+      ? '<span class="sim-turn-badge sim-turn-badge--first">🥇 先攻</span> 1ターン目はワザが使えない'
+      : '<span class="sim-turn-badge sim-turn-badge--second">🥈 後攻</span> 1ターン目からワザが使える';
+    setStatus(
+      `✅ バトル開始！ ${mulMsg}<br>` +
+      `${turnBadge}<br>` +
+      `てふだ <b>${finalHand.length}</b>まい &nbsp;・&nbsp; ` +
+      `ベンチ <b>${benchSelected.length}</b>体 &nbsp;・&nbsp; ` +
+      `サイド <b>6</b>まい &nbsp;・&nbsp; ` +
+      `デッキ残り <b>${deckLeft}</b>まい`,
+      'text-success'
+    );
+
+    // 確率計算エリアをシミュレーター結果に同期
+    const deckRemainInput2 = document.getElementById('deckRemain');
+    const drawnInput2      = document.getElementById('drawnCount');
+    if (deckRemainInput2) {
+      deckRemainInput2.value = deckLeft;          // 実際の山札残り（47枚等）
+      deckRemainInput2.dispatchEvent(new Event('change'));
+    }
+    if (drawnInput2) {
+      drawnInput2.value = 0;                      // このターンの追加ドローはまだ0
+      drawnInput2.dispatchEvent(new Event('change'));
+    }
+  }
+
+  // ---- マリガン ----
+  function doMulligan(hand) {
+    document.getElementById('btnMulligan').classList.remove('d-none');
+    setStatus(
+      `⚠️ たねポケモンなし！ マリガン <b>${mulliganCount}</b> 回目<br>` +
+      `相手は <b>${mulliganCount}</b> まい余分に引けます`,
+      'text-warning'
+    );
+    const row = document.getElementById('handRow');
+    row.innerHTML =
+      hand.map(() => `<div class="sim-cback sim-cback--hand"></div>`).join('') +
+      `<div class="sim-mulligan-badge w-100 text-center">たねポケモンがいない…</div>`;
+    document.getElementById('handLabel').textContent = `7まい（たねなし）`;
+    resetActive();
+    resetBench();
+    placePrizes(0);
+    setDeckCount('--');
+  }
+
+  // ---- 各ゾーン描画 ----
+  function placeActive(card) {
+    document.getElementById('activeSlot').innerHTML = makeFace(card, 'active');
+  }
+  function placeBench(cards) {
+    document.querySelectorAll('.sim-slot--bench').forEach((slot, i) => {
+      slot.innerHTML = i < cards.length ? makeFace(cards[i], 'bench') : '';
+    });
+  }
+  function placeHand(cards, faceDown) {
+    const row = document.getElementById('handRow');
+    row.innerHTML = faceDown
+      ? cards.map(() => `<div class="sim-cback sim-cback--hand"></div>`).join('')
+      : cards.map(c => makeFace(c, 'hand')).join('');
+    document.getElementById('handLabel').textContent = `${cards.length}まい`;
+  }
+  function placePrizes(count) {
+    document.querySelectorAll('#prizeGrid .sim-slot--prize').forEach((slot, i) => {
+      slot.innerHTML = i < count ? `<div class="sim-cback sim-cback--sm"></div>` : '';
+    });
+  }
+  function setDeckCount(n) {
+    document.getElementById('deckCount').textContent = (n === '--') ? '--' : n + 'まい';
+  }
+  function resetActive() {
+    document.getElementById('activeSlot').innerHTML =
+      `<span class="sim-slot-hint">たね<br>ポケモン</span>`;
+  }
+  function resetBench() {
+    document.querySelectorAll('.sim-slot--bench').forEach(s => s.innerHTML = '');
+  }
+  function makeFace(card, size) {
+    if (card.img) {
+      return `<div class="sim-cface sim-cface--${size}" title="${card.name}">
+                <img src="${card.img}" alt="${card.name}" loading="lazy">
+                <div class="sim-cface__name">${card.name}</div>
+              </div>`;
+    }
+    return `<div class="sim-cface sim-cface--noimg sim-cface--${size}" title="${card.name}">
+              <div class="ni-icon">🃏</div>
+              <div class="ni-name">${card.name}</div>
+            </div>`;
+  }
+  function setStatus(html, cls = '') {
+    document.getElementById('simStatus').innerHTML = `<span class="${cls}">${html}</span>`;
+  }
+
+  // ---- リセット ----
+  function resetSim() {
+    mulliganCount = 0;
+    simPhase      = 'idle';
+    currentHand   = [];
+    benchSelected = [];
+    document.getElementById('btnMulligan').classList.add('d-none');
+    document.getElementById('btnBattleStart').classList.add('d-none');
+    document.getElementById('btnSimReset').classList.add('d-none');
+    document.getElementById('simStatus').innerHTML = '';
+    document.getElementById('handRow').innerHTML =
+      '<p class="sim-hand-hint">🎲 下の「シミュレーション開始」を押してね！</p>';
+    document.getElementById('handLabel').textContent = '';
+    resetActive();
+    resetBench();
+    placePrizes(0);
+    setDeckCount('--');
+  }
+
+  // ---- イベント ----
+  document.getElementById('btnSimStart').addEventListener('click', () => runSim(false));
+  document.getElementById('btnMulligan').addEventListener('click', () => runSim(true));
+  document.getElementById('btnBattleStart').addEventListener('click', startBattle);
+  document.getElementById('btnSimReset').addEventListener('click', resetSim);
+
+  // 山札残り / 追加ドロー +/− ボタン
+  function clampInput(el, delta) {
+    const min = parseInt(el.min) || 0;
+    const max = parseInt(el.max) || 999;
+    el.value = Math.min(max, Math.max(min, (parseInt(el.value) || 0) + delta));
+    el.dispatchEvent(new Event('change'));
+  }
+  document.getElementById('btnDeckMinus') ?.addEventListener('click', () => clampInput(document.getElementById('deckRemain'), -1));
+  document.getElementById('btnDeckPlus')  ?.addEventListener('click', () => clampInput(document.getElementById('deckRemain'), +1));
+  document.getElementById('btnDrawnMinus')?.addEventListener('click', () => clampInput(document.getElementById('drawnCount'), -1));
+  document.getElementById('btnDrawnPlus') ?.addEventListener('click', () => clampInput(document.getElementById('drawnCount'), +1));
+  document.getElementById('btnDeckReset') ?.addEventListener('click', () => {
+    const dr = document.getElementById('deckRemain');
+    const dc = document.getElementById('drawnCount');
+    dr.value = DECK_TOTAL;
+    dc.value = 0;
+    dr.dispatchEvent(new Event('change'));
+    dc.dispatchEvent(new Event('change'));
+  });
+
+  // 先攻/後攻 トグル
+  document.getElementById('btnFirst').addEventListener('click', () => {
+    turnOrder = 'first';
+    document.getElementById('btnFirst').classList.add('active');
+    document.getElementById('btnSecond').classList.remove('active');
+    document.getElementById('turnNote').textContent = '先攻は1ターン目にワザが使えない';
+  });
+  document.getElementById('btnSecond').addEventListener('click', () => {
+    turnOrder = 'second';
+    document.getElementById('btnSecond').classList.add('active');
+    document.getElementById('btnFirst').classList.remove('active');
+    document.getElementById('turnNote').textContent = '後攻は1ターン目からワザが使える ＋ 追加でカードを1枚引ける';
+  });
+  document.getElementById('btnToggleSim').addEventListener('click', () => {
+    const c   = document.getElementById('simContent');
+    const btn = document.getElementById('btnToggleSim');
+    const hidden = c.style.display === 'none';
+    c.style.display = hidden ? 'block' : 'none';
+    btn.textContent = hidden ? '▲ たたむ' : '▼ ひらく';
+  });
+
+  renderStats();
+
+})(); // IIFE
+
+// ---- 選択済みカード ----
+const selectedCards = new Map(); // card_id -> {name, copies, element, resultEl, chart}
+
+// ---- カードタイル選択 ----
+document.querySelectorAll('.calc-card-tile').forEach(tile => {
+  tile.addEventListener('click', () => {
+    const id   = tile.dataset.cardId;
+    const name = tile.dataset.cardName;
+    const copies = parseInt(tile.dataset.copies);
+
+    if (selectedCards.has(id)) {
+      deselect(id, tile);
+    } else {
+      select(id, name, copies, tile);
+    }
+  });
+});
+
+function select(id, name, copies, tile) {
+  tile.classList.add('selected');
+  const img = tile.querySelector('img')?.src || '';
+
+  const resultEl = buildResultCard(id, name, copies, img);
+  document.getElementById('resultArea').querySelector('.result-placeholder')?.remove();
+  document.getElementById('resultArea').appendChild(resultEl);
+
+  const chart = initChart(resultEl.querySelector('.turn-chart'));
+  selectedCards.set(id, { name, copies, tile, resultEl, chart });
+  recalcAll();
+}
+
+function deselect(id, tile) {
+  tile.classList.remove('selected');
+  const entry = selectedCards.get(id);
+  entry?.chart?.destroy();
+  entry?.resultEl?.remove();
+  selectedCards.delete(id);
+  if (selectedCards.size === 0) {
+    document.getElementById('resultArea').innerHTML =
+      `<div class="result-placeholder"><div class="fs-1 mb-2">👈</div>
+       <p class="fw-bold">左のカードをタップすると<br>確率が表示されます</p></div>`;
+  }
+}
+
+// ---- 結果カードを生成 ----
+function buildResultCard(id, name, copies, img) {
+  const tmpl = document.getElementById('resultTemplate').content.cloneNode(true);
+  const el = document.createElement('div');
+  el.appendChild(tmpl);
+  const card = el.firstElementChild;
+
+  if (img) card.querySelector('.result-card__img').src = img;
+  else      card.querySelector('.result-card__img').style.display = 'none';
+  card.querySelector('.result-card__name').textContent = name;
+
+  // コピー数ステッパー（山札に残っている枚数を手動調整可能）
+  const copiesEl = card.querySelector('.result-card__copies');
+  copiesEl.innerHTML =
+    `<span class="rc-copies-label">山札に残り</span>
+     <button class="rc-copies-btn rc-copies-minus" type="button">−</button>
+     <span class="rc-copies-val">${copies}</span>
+     <span class="rc-copies-unit">まい</span>
+     <button class="rc-copies-btn rc-copies-plus" type="button">＋</button>
+     <span class="rc-copies-orig text-muted">（デッキに ${copies} まい）</span>`;
+
+  const valEl   = copiesEl.querySelector('.rc-copies-val');
+  const origEl  = copiesEl.querySelector('.rc-copies-orig');
+  const origMax = copies; // デッキ登録枚数
+
+  function setCopies(n) {
+    const clamped = Math.max(0, Math.min(origMax, n));
+    valEl.textContent = clamped;
+    // 変更があれば色で示す
+    valEl.className = 'rc-copies-val' + (clamped !== origMax ? ' rc-copies-changed' : '');
+    const entry = selectedCards.get(id);
+    if (entry) { entry.copies = clamped; recalcAll(); }
+  }
+
+  copiesEl.querySelector('.rc-copies-minus').addEventListener('click', () => {
+    setCopies(parseInt(valEl.textContent) - 1);
+  });
+  copiesEl.querySelector('.rc-copies-plus').addEventListener('click', () => {
+    setCopies(parseInt(valEl.textContent) + 1);
+  });
+
+  card.querySelector('.result-card__close').addEventListener('click', () => {
+    const entry = selectedCards.get(id);
+    entry?.tile?.classList.remove('selected');
+    deselect(id, entry?.tile);
+  });
+  card.dataset.cardId = id;
+  return card;
+}
+
+// ---- Chart.js 初期化 ----
+function initChart(canvas) {
+  return new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [{
+        label: '引ける確率 (%)',
+        data: [],
+        backgroundColor: [],
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.parsed.y}% — 100回に${ctx.parsed.y}回`
+          }
+        }
+      },
+      scales: {
+        y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+// ---- 再計算 ----
+const deckRemainInput = document.getElementById('deckRemain');
+const drawnInput      = document.getElementById('drawnCount');
+
+[deckRemainInput, drawnInput].forEach(el =>
+  el?.addEventListener('change', recalcAll)
+);
+
+async function recalcAll() {
+  if (selectedCards.size === 0) return;
+  const deckSize = parseInt(deckRemainInput?.value || DECK_TOTAL);
+  const drawn    = parseInt(drawnInput?.value || 0);
+
+  const payload = {
+    deck_size: deckSize,
+    drawn: drawn,
+    cards: [...selectedCards.entries()].map(([id, {name, copies}]) => ({
+      card_id: id, card_name: name, copies,
+    })),
+  };
+
+  const results = await fetch('/api/calc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then(r => r.json());
+
+  results.forEach(res => {
+    const entry = selectedCards.get(res.card_id);
+    if (!entry) return;
+    renderResult(entry.resultEl, entry.chart, res);
+  });
+}
+
+function renderResult(el, chart, res) {
+  const init = res.turns[0]; // ターン0 = はじめの7まい
+  const pct  = init.prob;
+
+  // ハイライト
+  el.querySelector('.prob-highlight__pct').textContent = `${pct}%`;
+  const fill = el.querySelector('.prob-bar-fill');
+  fill.style.width = `${pct}%`;
+  fill.style.background = pctColor(pct);
+  el.querySelector('.prob-highlight__words').textContent =
+    pct >= 50
+      ? `100かいやったら ${init.out_of_100} かいは引ける！ 😊`
+      : `100かいやったら ${init.out_of_100} かいしか引けない… 😅`;
+
+  // グラフ
+  chart.data.labels = res.turns.map(t => t.label);
+  chart.data.datasets[0].data = res.turns.map(t => t.prob);
+  chart.data.datasets[0].backgroundColor = res.turns.map(t => pctColor(t.prob) + 'cc');
+  chart.update();
+}
+
+function pctColor(pct) {
+  if (pct >= 75) return '#28a745';
+  if (pct >= 50) return '#fd7e14';
+  return '#dc3545';
+}
+</script>
+{% endblock %}

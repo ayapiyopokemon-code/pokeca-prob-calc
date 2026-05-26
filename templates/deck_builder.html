@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+{% block title %}{{ deck.name }} | デッキ編集{% endblock %}
+
+{% block nav_right %}
+<div class="d-flex align-items-center gap-2">
+  <span id="totalBadge"
+    class="deck-count-badge {% if total == 60 %}badge-ok{% elif total > 60 %}badge-over{% else %}badge-short{% endif %} fs-6">
+    {{ total }} / 60
+  </span>
+  <a href="/deck/{{ deck.id }}/calc"
+     class="btn btn-pokeca-calc btn-sm {% if total == 0 %}disabled{% endif %}"
+     id="goCalcBtn">📊 確率を調べる</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <!-- デッキ名 -->
+  <div class="deck-name-row mb-3 d-flex align-items-center gap-2">
+    <input type="text" id="deckNameInput" class="form-control form-control-lg fw-bold deck-name-input"
+           value="{{ deck.name }}" placeholder="デッキの名前">
+    <button class="btn btn-outline-secondary btn-sm" id="saveName">保存</button>
+  </div>
+
+  <div class="row g-3">
+
+    <!-- 左: カード検索 -->
+    <div class="col-12 col-lg-6">
+      <div class="panel-box">
+        <h2 class="panel-title">🔍 カードをさがす</h2>
+        <div class="search-hint mb-2">
+          <span>💡 日本語でカード名を入力してください（例: ピカチュウ、リザードン、ボスの指令）</span>
+        </div>
+        <div class="search-wrap mb-3">
+          <div class="input-group">
+            <input type="text" id="searchInput" class="form-control form-control-lg"
+                   placeholder="例: ピカチュウex" autocomplete="off">
+            <button class="btn btn-pokeca-main" id="searchBtn">検索</button>
+          </div>
+          <div class="search-autocomplete d-none" id="searchSuggest"></div>
+        </div>
+        <div id="searchLoading" class="text-center py-3 d-none">
+          <div class="spinner-border text-warning" role="status"></div>
+          <p class="mt-2 text-muted">さがしています…</p>
+        </div>
+        <div id="searchResults" class="search-grid"></div>
+      </div>
+
+      <!-- 公式デッキコード インポート -->
+      <div class="panel-box mt-3">
+        <h2 class="panel-title">🔗 公式デッキコードでインポート</h2>
+        <p class="text-muted small mb-2">
+          <a href="https://www.pokemon-card.com/deck/" target="_blank" rel="noopener"
+             class="text-decoration-none fw-bold" style="color:#e53e3e">pokemon-card.com</a>
+          のデッキ共有コード（または共有URL）を貼り付けてください
+        </p>
+        <div class="code-import-wrap">
+          <div class="input-group">
+            <input type="text" id="deckCodeInput" class="form-control"
+                   placeholder="例: aabbcc-112233-xxyyzz  または共有URL">
+            <button class="btn btn-code-import" id="deckCodeBtn">
+              <span id="deckCodeBtnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+              <span id="deckCodeBtnLabel">📥 取得</span>
+            </button>
+          </div>
+        </div>
+        <div id="codeImportMsg" class="mt-2 d-none"></div>
+      </div>
+
+      <!-- PTCG Live テキスト インポート -->
+      <div class="panel-box mt-3">
+        <h2 class="panel-title">📋 テキストでインポート（PTCG Live）</h2>
+        <p class="text-muted small mb-2">PTCG Live でエクスポートしたデッキリストを貼り付けてください</p>
+        <textarea id="importText" class="form-control" rows="5"
+                  placeholder="例:&#10;Pokémon: 12&#10;4 Charizard ex OBF 125&#10;4 Charmander OBF 26&#10;..."></textarea>
+        <button class="btn btn-outline-primary mt-2 w-100" id="importBtn">インポートする</button>
+        <div id="importMsg" class="mt-2 d-none"></div>
+      </div>
+    </div>
+
+    <!-- 右: デッキ内容 -->
+    <div class="col-12 col-lg-6">
+      <div class="panel-box" id="deckPanel">
+        <h2 class="panel-title">🃏 デッキの中身</h2>
+
+        {% set pokemon_cards = cards | selectattr('supertype', 'equalto', 'Pokémon') | list %}
+        {% set trainer_cards = cards | selectattr('supertype', 'equalto', 'Trainer') | list %}
+        {% set energy_cards  = cards | selectattr('supertype', 'equalto', 'Energy')  | list %}
+        {% set other_cards   = cards | rejectattr('supertype', 'in', ['Pokémon','Trainer','Energy']) | list %}
+
+        <div id="deckContent">
+          {% if cards %}
+            {% for group_name, group_cards in [
+              ('ポケモン', pokemon_cards),
+              ('トレーナーズ', trainer_cards),
+              ('エネルギー', energy_cards),
+              ('その他', other_cards)
+            ] %}
+            {% if group_cards %}
+            <div class="card-group-section" data-supertype="{{ group_name }}">
+              <div class="card-group-header">
+                <span>{{ group_name }}</span>
+                <span class="badge bg-secondary ms-1">{{ group_cards | sum(attribute='quantity') }}</span>
+              </div>
+              {% for c in group_cards %}
+              <div class="deck-row" id="row-{{ c.card_id | replace('/', '-') }}" data-card-id="{{ c.card_id }}">
+                {% if c.image_small %}
+                <img src="{{ c.image_small }}" alt="{{ c.card_name }}" class="deck-row__img">
+                {% else %}
+                <div class="deck-row__img deck-row__img--placeholder">🃏</div>
+                {% endif %}
+                <span class="deck-row__name">{{ c.card_name }}</span>
+                <div class="qty-control">
+                  <button class="qty-btn btn-minus" data-card-id="{{ c.card_id }}">－</button>
+                  <span class="qty-value" id="qty-{{ c.card_id | replace('/', '-') }}">{{ c.quantity }}</span>
+                  <button class="qty-btn btn-plus" data-card-id="{{ c.card_id }}">＋</button>
+                </div>
+                <button class="btn-remove" data-card-id="{{ c.card_id }}">✕</button>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+            {% endfor %}
+          {% else %}
+          <div class="empty-deck-msg" id="emptyDeckMsg">
+            <p>👈 左でカードを検索して追加しよう！</p>
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const DECK_ID = {{ deck.id }};
+
+// ---- ユーティリティ ----
+async function postJSON(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+// ---- 合計バッジ更新 ----
+function updateTotalBadge(total) {
+  const badge = document.getElementById('totalBadge');
+  badge.textContent = `${total} / 60`;
+  badge.className = 'deck-count-badge fs-6 ' +
+    (total === 60 ? 'badge-ok' : total > 60 ? 'badge-over' : 'badge-short');
+  const calcBtn = document.getElementById('goCalcBtn');
+  if (total > 0) calcBtn.classList.remove('disabled');
+  else calcBtn.classList.add('disabled');
+}
+
+// ---- デッキ名保存 ----
+document.getElementById('saveName').addEventListener('click', async () => {
+  const name = document.getElementById('deckNameInput').value.trim();
+  await postJSON(`/api/deck/${DECK_ID}/rename`, { name });
+  document.title = `${name} | デッキ編集`;
+});
+
+// ---- カード検索 ----
+const searchInput = document.getElementById('searchInput');
+const searchBtn   = document.getElementById('searchBtn');
+
+async function doSearch() {
+  const q = searchInput.value.trim();
+  if (!q) return;
+  document.getElementById('searchLoading').classList.remove('d-none');
+  document.getElementById('searchResults').innerHTML = '';
+  try {
+    const cards = await fetch(`/api/search?q=${encodeURIComponent(q)}`).then(r => r.json());
+    renderSearchResults(cards);
+  } finally {
+    document.getElementById('searchLoading').classList.add('d-none');
+  }
+}
+
+searchBtn.addEventListener('click', () => { hideSuggest(); doSearch(); });
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { hideSuggest(); doSearch(); }
+  if (e.key === 'Escape') hideSuggest();
+});
+
+// ---- オートコンプリート ----
+let suggestTimer;
+searchInput.addEventListener('input', () => {
+  clearTimeout(suggestTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 1) { hideSuggest(); return; }
+  suggestTimer = setTimeout(() => fetchSuggest(q), 280);
+});
+
+async function fetchSuggest(q) {
+  try {
+    const names = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`).then(r => r.json());
+    renderSuggest(names, q);
+  } catch { hideSuggest(); }
+}
+
+function renderSuggest(names, q) {
+  const el = document.getElementById('searchSuggest');
+  if (!names.length) { hideSuggest(); return; }
+  el.innerHTML = names.map(n => {
+    // マッチ部分をハイライト
+    const highlighted = n.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g'),
+      '<strong>$1</strong>');
+    return `<div class="suggest-item" data-name="${n}">${highlighted}</div>`;
+  }).join('');
+  el.classList.remove('d-none');
+  el.querySelectorAll('.suggest-item').forEach(item => {
+    item.addEventListener('mousedown', e => {
+      e.preventDefault(); // blur を防ぐ
+      searchInput.value = item.dataset.name;
+      hideSuggest();
+      doSearch();
+    });
+  });
+}
+
+function hideSuggest() {
+  const el = document.getElementById('searchSuggest');
+  el.classList.add('d-none');
+  el.innerHTML = '';
+}
+
+searchInput.addEventListener('blur', () => setTimeout(hideSuggest, 150));
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) hideSuggest();
+});;
+
+function renderSearchResults(cards) {
+  const grid = document.getElementById('searchResults');
+  if (!cards.length) {
+    grid.innerHTML = '<p class="text-muted text-center py-3">見つかりませんでした。英語で試してみてね！</p>';
+    return;
+  }
+  grid.innerHTML = cards.map(c => `
+    <div class="search-card" data-card='${JSON.stringify(c).replace(/'/g,"&apos;")}'>
+      <div class="search-card__img-wrap">
+        ${c.image_small
+          ? `<img src="${c.image_small}" alt="${c.name}" loading="lazy">`
+          : `<div class="no-img">🃏</div>`}
+        <button class="search-card__add-btn" title="追加">＋</button>
+      </div>
+      <div class="search-card__name">${c.name}</div>
+      <div class="search-card__sub">${c.set_name} #${c.number}</div>
+      <div class="search-card__type">${(c.types||[]).join(' / ') || c.supertype}</div>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('.search-card').forEach(el => {
+    el.querySelector('.search-card__add-btn').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const card = JSON.parse(el.dataset.card.replace(/&apos;/g, "'"));
+      const result = await postJSON(`/api/deck/${DECK_ID}/add`, card);
+      if (result.ok) {
+        updateTotalBadge(result.total);
+        updateDeckRow(card, result.quantity);
+        flashElement(el);
+      }
+    });
+  });
+}
+
+function flashElement(el) {
+  el.classList.add('flash-added');
+  setTimeout(() => el.classList.remove('flash-added'), 600);
+}
+
+// ---- デッキ行の更新 ----
+function updateDeckRow(card, quantity) {
+  const safeId = card.id.replace(/\//g, '-');
+  const existingRow = document.getElementById(`row-${safeId}`);
+
+  document.getElementById('emptyDeckMsg')?.remove();
+
+  if (existingRow) {
+    document.getElementById(`qty-${safeId}`).textContent = quantity;
+  } else {
+    // 新規行を追加
+    const section = ensureSection(card.supertype);
+    const row = document.createElement('div');
+    row.className = 'deck-row';
+    row.id = `row-${safeId}`;
+    row.dataset.cardId = card.id;
+    row.innerHTML = `
+      ${card.image_small
+        ? `<img src="${card.image_small}" alt="${card.name}" class="deck-row__img">`
+        : `<div class="deck-row__img deck-row__img--placeholder">🃏</div>`}
+      <span class="deck-row__name">${card.name}</span>
+      <div class="qty-control">
+        <button class="qty-btn btn-minus" data-card-id="${card.id}">－</button>
+        <span class="qty-value" id="qty-${safeId}">1</span>
+        <button class="qty-btn btn-plus" data-card-id="${card.id}">＋</button>
+      </div>
+      <button class="btn-remove" data-card-id="${card.id}">✕</button>
+    `;
+    section.appendChild(row);
+    bindRowEvents(row);
+  }
+  updateSectionBadge(card.supertype);
+}
+
+function ensureSection(supertype) {
+  const jpName = { 'Pokémon': 'ポケモン', 'Trainer': 'トレーナーズ', 'Energy': 'エネルギー' }[supertype] || 'その他';
+  let section = document.querySelector(`.card-group-section[data-supertype="${jpName}"]`);
+  if (!section) {
+    section = document.createElement('div');
+    section.className = 'card-group-section';
+    section.dataset.supertype = jpName;
+    section.innerHTML = `<div class="card-group-header">
+      <span>${jpName}</span><span class="badge bg-secondary ms-1">0</span>
+    </div>`;
+    document.getElementById('deckContent').appendChild(section);
+  }
+  return section;
+}
+
+function updateSectionBadge(supertype) {
+  const jpName = { 'Pokémon': 'ポケモン', 'Trainer': 'トレーナーズ', 'Energy': 'エネルギー' }[supertype] || 'その他';
+  const section = document.querySelector(`.card-group-section[data-supertype="${jpName}"]`);
+  if (!section) return;
+  const total = [...section.querySelectorAll('.qty-value')]
+    .reduce((s, el) => s + parseInt(el.textContent), 0);
+  section.querySelector('.badge').textContent = total;
+}
+
+// ---- +/- ボタン・削除 ----
+function bindRowEvents(row) {
+  const cardId = row.dataset.cardId;
+  const safeId = cardId.replace(/\//g, '-');
+
+  row.querySelector('.btn-minus')?.addEventListener('click', async () => {
+    const cur = parseInt(document.getElementById(`qty-${safeId}`).textContent);
+    if (cur <= 1) { removeRow(cardId, row); return; }
+    const res = await postJSON(`/api/deck/${DECK_ID}/update`, { card_id: cardId, quantity: cur - 1 });
+    document.getElementById(`qty-${safeId}`).textContent = cur - 1;
+    updateTotalBadge(res.total);
+    updateSectionBadge(row.closest('.card-group-section')?.dataset.supertype);
+  });
+
+  row.querySelector('.btn-plus')?.addEventListener('click', async () => {
+    const cur = parseInt(document.getElementById(`qty-${safeId}`).textContent);
+    const res = await postJSON(`/api/deck/${DECK_ID}/update`, { card_id: cardId, quantity: cur + 1 });
+    document.getElementById(`qty-${safeId}`).textContent = res.total !== undefined ? cur + 1 : cur;
+    updateTotalBadge(res.total);
+    updateSectionBadge(row.closest('.card-group-section')?.dataset.supertype);
+  });
+
+  row.querySelector('.btn-remove')?.addEventListener('click', () => removeRow(cardId, row));
+}
+
+async function removeRow(cardId, row) {
+  const res = await postJSON(`/api/deck/${DECK_ID}/remove`, { card_id: cardId });
+  const section = row.closest('.card-group-section');
+  row.remove();
+  if (section && !section.querySelector('.deck-row')) section.remove();
+  updateTotalBadge(res.total);
+  if (!document.querySelector('.deck-row')) {
+    document.getElementById('deckContent').innerHTML =
+      '<div class="empty-deck-msg" id="emptyDeckMsg"><p>👈 左でカードを検索して追加しよう！</p></div>';
+  }
+}
+
+// 既存行にイベントをバインド
+document.querySelectorAll('.deck-row').forEach(bindRowEvents);
+
+// ---- 公式デッキコード インポート ----
+document.getElementById('deckCodeBtn').addEventListener('click', async () => {
+  const code = document.getElementById('deckCodeInput').value.trim();
+  if (!code) return;
+
+  const msg     = document.getElementById('codeImportMsg');
+  const spinner = document.getElementById('deckCodeBtnSpinner');
+  const label   = document.getElementById('deckCodeBtnLabel');
+  const btn     = document.getElementById('deckCodeBtn');
+
+  spinner.classList.remove('d-none');
+  label.textContent = '取得中…';
+  btn.disabled = true;
+  msg.className = 'mt-2';
+  msg.innerHTML = '<span class="text-muted small">デッキを取得しています…</span>';
+  msg.classList.remove('d-none');
+
+  try {
+    const res = await postJSON(`/api/deck/${DECK_ID}/import-code`, { code });
+    if (res.ok) {
+      msg.innerHTML =
+        `<span class="text-success fw-bold">✅ ${res.count}種類のカードを読み込みました！</span>`;
+      updateTotalBadge(res.total);
+      location.reload();
+    } else {
+      msg.innerHTML =
+        `<span class="text-danger">❌ ${res.error}</span>`;
+    }
+  } catch {
+    msg.innerHTML = '<span class="text-danger">❌ 通信エラーが発生しました</span>';
+  } finally {
+    spinner.classList.add('d-none');
+    label.textContent = '📥 取得';
+    btn.disabled = false;
+  }
+});
+
+// ---- テキストインポート ----
+document.getElementById('importBtn').addEventListener('click', async () => {
+  const text = document.getElementById('importText').value.trim();
+  if (!text) return;
+  const msg = document.getElementById('importMsg');
+  msg.className = 'mt-2';
+  msg.innerHTML = '<span class="text-muted">読み込み中…</span>';
+  msg.classList.remove('d-none');
+
+  const res = await postJSON(`/api/deck/${DECK_ID}/import`, { text });
+  if (res.ok) {
+    msg.innerHTML = `<span class="text-success">✅ ${res.count}種類のカードを読み込みました！</span>`;
+    updateTotalBadge(res.total);
+    location.reload();
+  } else {
+    msg.innerHTML = `<span class="text-danger">❌ ${res.error}</span>`;
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}デッキ一覧 | ポケカ確率計算{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- ヘッダー -->
+  <div class="page-hero mb-5">
+    <div class="hero-banner-wrap">
+      <img src="{{ url_for('static', filename='img/hero.svg') }}"
+           alt="ポケカ確率計算" class="hero-banner-img">
+    </div>
+    <div class="text-center mt-3">
+      <form action="/deck/new" method="post" class="d-inline-block me-2">
+        <button type="submit" class="btn btn-pokeca-main btn-lg px-5">
+          ＋ 新しいデッキを作る
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- デッキ一覧 -->
+  {% if decks %}
+  <h2 class="section-title mb-3">📦 保存しているデッキ</h2>
+  <div class="row g-3">
+    {% for deck in decks %}
+    <div class="col-12 col-sm-6 col-lg-4">
+      <div class="deck-card {% if deck.card_count == 60 %}deck-card--complete{% endif %}">
+        <div class="deck-card__header">
+          <span class="deck-card__name">{{ deck.name }}</span>
+          <span class="deck-count-badge {% if deck.card_count == 60 %}badge-ok{% elif deck.card_count > 60 %}badge-over{% else %}badge-short{% endif %}">
+            {{ deck.card_count }} / 60
+          </span>
+        </div>
+        <div class="deck-card__body">
+          <div class="progress deck-progress mb-2" style="height:8px">
+            <div class="progress-bar {% if deck.card_count == 60 %}bg-success{% elif deck.card_count > 60 %}bg-danger{% else %}bg-warning{% endif %}"
+                 style="width: {{ [deck.card_count / 60 * 100, 100] | min }}%"></div>
+          </div>
+          {% if deck.card_count == 60 %}
+          <small class="text-success fw-bold">✅ 60まい完成！</small>
+          {% elif deck.card_count == 0 %}
+          <small class="text-muted">カードがまだ入っていません</small>
+          {% else %}
+          <small class="text-warning fw-bold">あと {{ 60 - deck.card_count }} まい</small>
+          {% endif %}
+        </div>
+        <div class="deck-card__footer">
+          <a href="/deck/{{ deck.id }}/edit" class="btn btn-sm btn-outline-primary flex-fill">✏️ 編集</a>
+          <a href="/deck/{{ deck.id }}/calc" class="btn btn-sm btn-pokeca-calc flex-fill {% if deck.card_count == 0 %}disabled{% endif %}">
+            📊 確率を調べる
+          </a>
+          <button class="btn btn-sm btn-outline-danger btn-delete-deck" data-deck-id="{{ deck.id }}">🗑</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🃏</div>
+    <p class="empty-text">デッキがまだありません</p>
+    <p class="empty-sub">「新しいデッキを作る」ボタンから始めよう！</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- 削除確認モーダル -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4">
+      <div class="modal-body text-center py-4">
+        <div class="fs-1 mb-2">🗑️</div>
+        <h5 class="fw-bold mb-1">デッキを削除しますか？</h5>
+        <p class="text-muted small">この操作は元に戻せません</p>
+      </div>
+      <div class="modal-footer border-0 justify-content-center gap-2">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">キャンセル</button>
+        <button class="btn btn-danger" id="confirmDelete">削除する</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let deleteTargetId = null;
+const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+document.querySelectorAll('.btn-delete-deck').forEach(btn => {
+  btn.addEventListener('click', () => {
+    deleteTargetId = btn.dataset.deckId;
+    deleteModal.show();
+  });
+});
+
+document.getElementById('confirmDelete').addEventListener('click', async () => {
+  if (!deleteTargetId) return;
+  await fetch(`/api/deck/${deleteTargetId}/delete`, { method: 'POST' });
+  location.reload();
+});
+</script>
+{% endblock %}

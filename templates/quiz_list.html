@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}選択肢問題 | ポケカ確率計算{% endblock %}
+
+{% block nav_right %}
+<a href="/quiz/new" class="btn btn-pokeca-main btn-sm px-3">＋ 新しい問題を作る</a>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <h1 class="deck-calc-title mb-1">🧩 選択肢問題</h1>
+  <p class="text-muted mb-4">ゲームの状況に応じた最善の一手を考える練習問題</p>
+
+  {% if questions %}
+  <div class="row g-3">
+    {% for q in questions %}
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="quiz-card">
+        <div class="quiz-card__header">
+          <span class="quiz-card__num">#{{ q.id }}</span>
+          <span class="quiz-card__choice-count">選択肢 {{ q.choice_count }}個</span>
+        </div>
+        <div class="quiz-card__title">{{ q.title }}</div>
+        <p class="quiz-card__scenario">{{ q.scenario[:80] }}{% if q.scenario|length > 80 %}…{% endif %}</p>
+        <div class="quiz-card__state">
+          <span class="qcs-badge">山札 {{ q.deck_remaining }}まい</span>
+          <span class="qcs-badge">サイド {{ q.side_remaining }}まい</span>
+          {% if q.win_card_name %}
+          <span class="qcs-badge qcs-badge--win">🎯 {{ q.win_card_name }} × {{ q.win_card_count }}</span>
+          {% endif %}
+        </div>
+        <div class="quiz-card__actions">
+          <a href="/quiz/{{ q.id }}" class="btn btn-pokeca-main btn-sm px-3">▶ 解く</a>
+          <a href="/quiz/{{ q.id }}/edit" class="btn btn-outline-secondary btn-sm">✏️ 編集</a>
+          <form action="/quiz/{{ q.id }}/delete" method="POST" class="d-inline"
+                onsubmit="return confirm('この問題を削除しますか？')">
+            <button class="btn btn-outline-danger btn-sm">🗑</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🧩</div>
+    <p class="empty-text">まだ問題がありません</p>
+    <a href="/quiz/new" class="btn btn-pokeca-main">最初の問題を作る</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

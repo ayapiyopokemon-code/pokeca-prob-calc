@@ -1,0 +1,1245 @@
+/* ===== Base ===== */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: #f0f4ff;
+  color: #222;
+  font-size: 15px;
+}
+
+/* ===== Nav ===== */
+.pokeca-nav {
+  background: linear-gradient(135deg, #e53e3e 0%, #c53030 50%, #1a202c 100%);
+  color: #fff;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-icon { font-size: 1.5rem; }
+.nav-title {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #FFD700;
+  text-decoration: none;
+  letter-spacing: .5px;
+}
+.nav-quiz-link {
+  font-size: .82rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.8);
+  text-decoration: none;
+  padding: 3px 10px;
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 50px;
+  transition: all .15s;
+}
+.nav-quiz-link:hover { color: #fff; border-color: #FFD700; background: rgba(255,215,0,.15); }
+
+.main-wrap { min-height: calc(100vh - 56px); }
+
+/* ===== Buttons ===== */
+.btn-pokeca-main {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #1a202c;
+  font-weight: 900;
+  border: none;
+  border-radius: 50px;
+  box-shadow: 0 3px 10px rgba(255,165,0,.4);
+  transition: transform .15s, box-shadow .15s;
+}
+.btn-pokeca-main:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 16px rgba(255,165,0,.5);
+  color: #1a202c;
+}
+
+.btn-pokeca-calc {
+  background: linear-gradient(135deg, #48bb78, #38a169);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 50px;
+  box-shadow: 0 3px 8px rgba(72,187,120,.35);
+  transition: transform .15s;
+}
+.btn-pokeca-calc:hover { transform: translateY(-2px); color: #fff; }
+
+/* ===== Hero (index) ===== */
+.page-hero { padding: 40px 20px 20px; }
+.hero-emoji { font-size: 4rem; line-height: 1; margin-bottom: 12px; }
+.hero-title  { font-size: 2.2rem; font-weight: 900; color: #1a202c; }
+.hero-sub    { font-size: 1.1rem; color: #555; }
+
+.section-title { font-size: 1.2rem; font-weight: 700; color: #333; }
+
+/* ===== Deck count badge ===== */
+.deck-count-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: .85rem;
+}
+.badge-ok    { background: #c6f6d5; color: #276749; }
+.badge-short { background: #fefcbf; color: #744210; }
+.badge-over  { background: #fed7d7; color: #822727; }
+
+/* ===== Deck card (index) ===== */
+.deck-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  overflow: hidden;
+  transition: transform .15s, box-shadow .15s;
+  border: 2px solid transparent;
+}
+.deck-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+.deck-card--complete { border-color: #48bb78; }
+
+.deck-card__header {
+  padding: 14px 16px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.deck-card__name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a202c;
+  flex: 1;
+  word-break: break-word;
+}
+.deck-card__body  { padding: 0 16px 10px; }
+.deck-card__footer {
+  padding: 10px 16px;
+  border-top: 1px solid #f0f4ff;
+  display: flex;
+  gap: 6px;
+}
+
+/* ===== Empty state ===== */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #888;
+}
+.empty-icon { font-size: 4rem; margin-bottom: 16px; }
+.empty-text { font-size: 1.3rem; font-weight: 700; color: #555; margin-bottom: 8px; }
+.empty-sub  { font-size: 1rem; }
+
+/* ===== Panel box ===== */
+.panel-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.07);
+}
+.panel-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #1a202c;
+  margin-bottom: 16px;
+}
+
+/* ===== Search hint ===== */
+.search-hint {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: .85rem;
+  color: #744210;
+}
+
+/* ===== Search wrap & autocomplete ===== */
+.search-wrap { position: relative; }
+
+.search-autocomplete {
+  position: absolute;
+  top: calc(100% - 2px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 2px solid #FFD700;
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.12);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.suggest-item {
+  padding: 11px 18px;
+  cursor: pointer;
+  font-size: .95rem;
+  color: #222;
+  transition: background .1s;
+  border-bottom: 1px solid #f0f4ff;
+}
+.suggest-item:last-child { border-bottom: none; }
+.suggest-item:hover { background: #fffbeb; }
+.suggest-item strong { color: #e53e3e; font-weight: 900; }
+
+/* ===== Search results grid ===== */
+.search-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.search-card {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f9fafb;
+  border: 2px solid #e2e8f0;
+  transition: border-color .15s, transform .15s;
+  cursor: pointer;
+}
+.search-card:hover { border-color: #FFD700; transform: translateY(-2px); }
+
+.search-card__img-wrap {
+  position: relative;
+  background: #eee;
+  aspect-ratio: 63/88;
+  overflow: hidden;
+}
+.search-card__img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.no-img { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 2rem; }
+
+.search-card__add-btn {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #FFD700;
+  color: #1a202c;
+  font-size: 1.1rem;
+  font-weight: 900;
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+  transition: transform .1s;
+  opacity: 0;
+}
+.search-card:hover .search-card__add-btn { opacity: 1; }
+.search-card__add-btn:hover { transform: scale(1.2); }
+
+.search-card__name { font-size: .75rem; font-weight: 700; padding: 4px 6px 0; text-align: center; line-height: 1.2; }
+.search-card__sub  { font-size: .65rem; color: #888; padding: 1px 6px; text-align: center; }
+.search-card__type { font-size: .65rem; color: #555; padding: 1px 6px 6px; text-align: center; }
+
+@keyframes flash {
+  0%   { box-shadow: 0 0 0 0 rgba(255,215,0,.7); }
+  70%  { box-shadow: 0 0 0 10px rgba(255,215,0,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,215,0,0); }
+}
+.flash-added { animation: flash .6s ease-out; border-color: #FFD700 !important; }
+
+/* ===== Deck rows ===== */
+.card-group-section { margin-bottom: 12px; }
+.card-group-header {
+  font-weight: 700;
+  font-size: .85rem;
+  color: #555;
+  padding: 4px 0 6px;
+  border-bottom: 2px solid #f0f4ff;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.deck-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 10px;
+  transition: background .12s;
+}
+.deck-row:hover { background: #f7faff; }
+
+.deck-row__img {
+  width: 38px;
+  height: 53px;
+  object-fit: cover;
+  border-radius: 5px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+.deck-row__img--placeholder {
+  background: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border-radius: 5px;
+}
+.deck-row__name {
+  flex: 1;
+  font-size: .9rem;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.qty-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.qty-btn {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e0;
+  background: #fff;
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .1s, border-color .1s;
+  padding: 0;
+}
+.qty-btn:hover { background: #ebf8ff; border-color: #63b3ed; }
+.qty-value { font-weight: 700; font-size: 1rem; min-width: 20px; text-align: center; }
+
+.btn-remove {
+  background: none;
+  border: none;
+  color: #fc8181;
+  font-size: .9rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+  transition: background .1s;
+}
+.btn-remove:hover { background: #fff5f5; color: #e53e3e; }
+
+.empty-deck-msg {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888;
+  font-size: 1rem;
+}
+
+/* ===== Deck name input ===== */
+.deck-name-input {
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-weight: 700;
+  background: #fff;
+}
+.deck-name-input:focus { border-color: #FFD700; box-shadow: 0 0 0 3px rgba(255,215,0,.2); }
+
+/* ===== Calc page ===== */
+.deck-calc-title { font-size: 1.6rem; font-weight: 900; }
+
+.calc-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.calc-card-tile {
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f9fafb;
+  border: 2px solid #e2e8f0;
+  cursor: pointer;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+  position: relative;
+}
+.calc-card-tile:hover { border-color: #63b3ed; transform: translateY(-2px); }
+.calc-card-tile.selected {
+  border-color: #48bb78;
+  box-shadow: 0 0 0 3px rgba(72,187,120,.35);
+}
+.calc-card-tile img {
+  width: 100%;
+  aspect-ratio: 63/88;
+  object-fit: cover;
+  display: block;
+}
+.calc-card-tile__noimg {
+  aspect-ratio: 63/88;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: #eee;
+}
+.calc-card-tile__name  { font-size: .65rem; font-weight: 700; padding: 3px 4px 0; text-align: center; line-height: 1.2; }
+.calc-card-tile__copies { font-size: .6rem; color: #888; padding: 1px 4px 4px; text-align: center; }
+
+.calc-card-tile__check {
+  display: none;
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 20px; height: 20px;
+  background: #48bb78;
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 900;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+}
+.calc-card-tile.selected .calc-card-tile__check { display: flex; }
+
+/* ===== Result ===== */
+.result-placeholder {
+  text-align: center;
+  padding: 60px 20px;
+  background: #fff;
+  border-radius: 16px;
+  color: #aaa;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.result-placeholder p { font-size: 1.1rem; color: #555; }
+
+.result-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.08);
+}
+.result-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.result-card__img {
+  width: 50px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+  flex-shrink: 0;
+}
+.result-card__name  { font-size: 1.05rem; font-weight: 700; }
+.result-card__close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #aaa;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.result-card__close:hover { background: #f0f4ff; color: #555; }
+
+.prob-highlight {
+  background: linear-gradient(135deg, #f0f4ff, #ebf8ff);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.prob-highlight__label { font-size: .9rem; font-weight: 700; color: #555; margin-bottom: 8px; }
+.prob-highlight__pct   { font-size: 3rem; font-weight: 900; color: #1a202c; line-height: 1; margin-bottom: 10px; }
+.prob-highlight__bar   {
+  height: 14px;
+  background: #e2e8f0;
+  border-radius: 50px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.prob-bar-fill {
+  height: 100%;
+  border-radius: 50px;
+  transition: width .5s ease, background .5s ease;
+}
+.prob-highlight__words { font-size: 1rem; font-weight: 700; color: #444; }
+
+/* ===== Hero banner image ===== */
+.hero-banner-wrap {
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(99,102,241,.18);
+  background: linear-gradient(135deg, #eef2ff, #c7d2fe);
+  max-width: 680px;
+  margin: 0 auto;
+}
+.hero-banner-img {
+  width: 100%;
+  display: block;
+}
+
+/* ===== Deck code import ===== */
+.code-import-wrap .form-control {
+  border: 2px solid #e2e8f0;
+  border-radius: 10px 0 0 10px;
+  font-size: .9rem;
+}
+.code-import-wrap .form-control:focus {
+  border-color: #e53e3e;
+  box-shadow: 0 0 0 3px rgba(229,62,62,.15);
+}
+.btn-code-import {
+  background: linear-gradient(135deg, #e53e3e, #c53030);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 0 10px 10px 0;
+  padding: 0 18px;
+  white-space: nowrap;
+  transition: opacity .15s;
+}
+.btn-code-import:hover  { opacity: .88; color: #fff; }
+.btn-code-import:disabled { opacity: .6; }
+
+/* ===== Field Simulator ===== */
+
+/* Stats bar */
+.sim-stats-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sim-stat-box {
+  flex: 1;
+  min-width: 108px;
+  background: #f0f4ff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  text-align: center;
+}
+.sim-stat-label {
+  font-size: .72rem;
+  color: #666;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.sim-stat-val {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #1a202c;
+}
+.sim-stat-val.sv-good { color: #276749; }
+.sim-stat-val.sv-warn { color: #744210; }
+.sim-stat-val.sv-bad  { color: #9b2c2c; }
+
+/* ---- Field mat ---- */
+.sim-mat {
+  background: linear-gradient(155deg, #2d6b2d 0%, #3c8c3c 45%, #2d6b2d 100%);
+  border-radius: 16px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.12);
+  position: relative;
+  overflow: hidden;
+}
+/* subtle grid lines for felt effect */
+.sim-mat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* Opponent area label */
+.sim-side-label {
+  text-align: center;
+  font-size: .62rem;
+  color: rgba(255,255,255,.4);
+  font-weight: 600;
+  letter-spacing: .8px;
+  margin-bottom: 8px;
+  position: relative;
+}
+/* Divider between opponents */
+.sim-divider {
+  height: 1px;
+  background: rgba(255,255,255,.18);
+  margin: 0 0 14px;
+  position: relative;
+}
+
+/* Zone labels */
+.sim-zlabel {
+  font-size: .68rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.82);
+  text-align: center;
+  margin-bottom: 5px;
+  text-shadow: 0 1px 3px rgba(0,0,0,.5);
+  letter-spacing: .3px;
+  position: relative;
+}
+
+/* Top row: prizes | active+pokéball | deck */
+.sim-field-top {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+/* Prize grid (2 columns × 3 rows) */
+.sim-prize-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+/* Center column */
+.sim-center-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Deck column */
+.sim-deck-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Bench */
+.sim-bench-row {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+/* Hand */
+.sim-hand-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-height: 102px;
+  align-items: flex-end;
+  position: relative;
+}
+.sim-hand-hint {
+  color: rgba(255,255,255,.62);
+  font-size: .84rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+  padding: 30px 0;
+  width: 100%;
+}
+
+/* ---- Pokéball icon ---- */
+.sim-pokeball {
+  width: 38px;
+  height: 38px;
+  background: radial-gradient(circle at 37% 33%, #fff 0%, #e0e0e0 45%, #ccc 100%);
+  border: 3px solid rgba(255,255,255,.7);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,.35), inset 0 1px 2px rgba(255,255,255,.6);
+  position: relative;
+  flex-shrink: 0;
+}
+.sim-pokeball::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: rgba(0,0,0,.25);
+  transform: translateY(-50%);
+}
+.sim-pokeball::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  background: #fff;
+  border: 2px solid rgba(0,0,0,.18);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* ---- Empty card slots ---- */
+.sim-slot {
+  border: 1.5px dashed rgba(255,255,255,.38);
+  border-radius: 7px;
+  background: rgba(0,0,0,.13);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sim-slot--prize  { width: 42px;  height: 59px; }
+.sim-slot--active {
+  width: 86px; height: 121px;
+  border-color: rgba(255,215,0,.55);
+  background: rgba(255,215,0,.08);
+}
+.sim-slot--bench  { width: 55px;  height: 77px; }
+.sim-slot-hint {
+  font-size: .58rem;
+  color: rgba(255,255,255,.48);
+  text-align: center;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+/* ---- Card backs (face-down) ---- */
+.sim-cback {
+  border-radius: 7px;
+  background: linear-gradient(155deg, #2563eb 0%, #1e3a8a 100%);
+  border: 2px solid #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 3px 8px rgba(0,0,0,.32);
+  flex-shrink: 0;
+}
+.sim-cback::before {
+  content: '';
+  position: absolute;
+  width: 52%;
+  height: 52%;
+  border: 2.5px solid rgba(255,255,255,.42);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.sim-cback::after {
+  content: '';
+  position: absolute;
+  width: 16%;
+  height: 16%;
+  background: rgba(255,255,255,.75);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.sim-cback--sm   { width: 42px;  height: 59px; }
+.sim-cback--md   { width: 55px;  height: 77px; }
+.sim-cback--hand { width: 66px;  height: 92px; }
+.sim-cback--deck { width: 78px;  height: 110px; }
+
+/* Deck stack (3-card layered effect) */
+.sim-deck-wrap {
+  position: relative;
+  display: inline-block;
+}
+.sim-deck-wrap::before,
+.sim-deck-wrap::after {
+  content: '';
+  position: absolute;
+  width: 78px;
+  height: 110px;
+  background: #1e3a8a;
+  border: 2px solid #2563eb;
+  border-radius: 7px;
+}
+.sim-deck-wrap::before { top: -5px; left: -3px; }
+.sim-deck-wrap::after  { top: -3px; left: -2px; }
+.sim-deck-wrap .sim-cback--deck { position: relative; z-index: 2; }
+.sim-deck-count {
+  position: absolute;
+  bottom: 6px;
+  width: 100%;
+  text-align: center;
+  font-size: .76rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,.6);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ---- Face-up cards ---- */
+.sim-cface {
+  border-radius: 7px;
+  overflow: hidden;
+  box-shadow: 0 3px 10px rgba(0,0,0,.35);
+  border: 1.5px solid rgba(255,255,255,.5);
+  flex-shrink: 0;
+  position: relative;
+}
+.sim-cface img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sim-cface__name {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,.72);
+  color: #fff;
+  font-size: .5rem;
+  font-weight: 700;
+  padding: 2px 3px;
+  text-align: center;
+  line-height: 1.2;
+}
+.sim-cface--noimg {
+  background: linear-gradient(135deg, #1a202c, #2d3748);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: rgba(255,255,255,.8);
+}
+.sim-cface--noimg .ni-icon { font-size: 1.4rem; }
+.sim-cface--noimg .ni-name {
+  font-size: .48rem;
+  text-align: center;
+  padding: 0 2px;
+  line-height: 1.2;
+  word-break: break-all;
+}
+/* Sizes */
+.sim-cface--prize  { width: 42px;  height: 59px; }
+.sim-cface--active {
+  width: 86px; height: 121px;
+  box-shadow: 0 0 0 3px #FFD700, 0 6px 22px rgba(255,215,0,.45);
+  animation: simCardIn .38s cubic-bezier(.22,1,.36,1) both;
+}
+.sim-cface--bench  { width: 55px;  height: 77px; animation: simCardIn .3s ease-out both; }
+.sim-cface--hand   {
+  width: 66px; height: 92px;
+  cursor: default;
+  transition: transform .18s, box-shadow .18s, z-index 0s;
+}
+.sim-cface--hand:hover {
+  transform: translateY(-10px) scale(1.07);
+  z-index: 20;
+  box-shadow: 0 12px 28px rgba(0,0,0,.55);
+}
+
+@keyframes simCardIn {
+  from { opacity: 0; transform: scale(.7) rotate(-8deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* Mulligan label overlay on hand cards */
+.sim-mulligan-badge {
+  background: rgba(220,53,69,.9);
+  color: #fff;
+  font-size: .65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 50px;
+  text-align: center;
+  margin-top: 6px;
+  width: 100%;
+}
+
+/* Controls */
+.sim-controls-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.sim-status-msg {
+  text-align: center;
+  font-size: .9rem;
+  font-weight: 700;
+  min-height: 1.5em;
+  line-height: 1.5;
+}
+
+/* Responsive: small screens */
+@media (max-width: 480px) {
+  .sim-slot--prize  { width: 36px; height: 50px; }
+  .sim-slot--active { width: 72px; height: 101px; }
+  .sim-slot--bench  { width: 46px; height: 64px; }
+  .sim-cback--sm    { width: 36px; height: 50px; }
+  .sim-cback--md    { width: 46px; height: 64px; }
+  .sim-cback--hand  { width: 56px; height: 78px; }
+  .sim-cback--deck  { width: 66px; height: 92px; }
+  .sim-cface--prize  { width: 36px; height: 50px; }
+  .sim-cface--active { width: 72px; height: 101px; }
+  .sim-cface--bench  { width: 46px; height: 64px; }
+  .sim-cface--hand   { width: 56px; height: 78px; }
+  .sim-deck-wrap::before,
+  .sim-deck-wrap::after { width: 66px; height: 92px; }
+  .sim-bench-row { gap: 3px; }
+}
+
+/* ===== Field selection interactive states ===== */
+
+/* バトル場選択モード — オレンジ枠 */
+.sim-cface--pickactive {
+  cursor: pointer;
+  border: 2px solid #FFA500;
+  box-shadow: 0 0 10px rgba(255,165,0,.7);
+  position: relative;
+}
+.sim-cface--pickactive:hover {
+  border-color: #FFD700;
+  box-shadow: 0 0 18px rgba(255,215,0,.95);
+  transform: translateY(-12px) scale(1.1);
+}
+
+/* バトル場バッジ */
+.sim-bench-badge--active {
+  background: rgba(255,140,0,.95) !important;
+  color: #fff !important;
+}
+
+/* ===== Bench selection interactive states ===== */
+
+/* Selectable Basic in hand — green border + pointer */
+.sim-cface--selectable {
+  cursor: pointer;
+  border: 2px solid #28a745;
+  box-shadow: 0 0 8px rgba(40,167,69,.6);
+  position: relative;
+}
+.sim-cface--selectable:hover {
+  border-color: #34d058;
+  box-shadow: 0 0 14px rgba(40,167,69,.85);
+  transform: translateY(-12px) scale(1.08);
+}
+
+/* Benched (selected) Basic in hand — gold border */
+.sim-cface--benched {
+  cursor: pointer;
+  border: 2px solid #FFD700;
+  box-shadow: 0 0 10px rgba(255,215,0,.75);
+  opacity: .85;
+  position: relative;
+}
+.sim-cface--benched:hover {
+  border-color: #FFA500;
+  box-shadow: 0 0 16px rgba(255,165,0,.9);
+  transform: translateY(-12px) scale(1.08);
+  opacity: 1;
+}
+
+/* Badge overlaid on selectable/benched card */
+.sim-bench-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: .55rem;
+  font-weight: 800;
+  white-space: nowrap;
+  padding: 1px 5px;
+  border-radius: 50px;
+  pointer-events: none;
+  z-index: 5;
+}
+.sim-cface--selectable .sim-bench-badge {
+  background: rgba(40,167,69,.92);
+  color: #fff;
+}
+.sim-cface--benched .sim-bench-badge {
+  background: rgba(255,215,0,.95);
+  color: #1a202c;
+}
+
+/* ===== クイズ 一覧ページ ===== */
+.quiz-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  border: 2px solid transparent;
+  transition: border-color .15s, box-shadow .15s;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quiz-card:hover { border-color: #FFD700; box-shadow: 0 4px 18px rgba(0,0,0,.13); }
+.quiz-card__header { display: flex; justify-content: space-between; align-items: center; }
+.quiz-card__num { font-size: .75rem; font-weight: 700; color: #888; }
+.quiz-card__choice-count { font-size: .72rem; color: #aaa; }
+.quiz-card__title { font-size: 1rem; font-weight: 800; color: #1a202c; }
+.quiz-card__scenario { font-size: .82rem; color: #555; margin: 0; flex: 1; }
+.quiz-card__state { display: flex; gap: 5px; flex-wrap: wrap; }
+.qcs-badge {
+  font-size: .72rem; font-weight: 700;
+  background: #f0f4ff; color: #3c6bc6;
+  padding: 2px 8px; border-radius: 50px;
+}
+.qcs-badge--win { background: #fff3cd; color: #856404; }
+.quiz-card__actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+
+/* ===== クイズ 編集ページ ===== */
+.quiz-choice-row {
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8f9fa;
+}
+.quiz-choice-required { background: #f0f7ff; }
+.quiz-choice-label {
+  font-size: .8rem; font-weight: 800; color: #3c6bc6;
+  margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px;
+}
+
+/* ===== クイズ プレイページ ===== */
+.quiz-play-header { display: flex; align-items: baseline; gap: 10px; }
+.quiz-play-num { font-size: .8rem; font-weight: 700; color: #aaa; }
+.quiz-play-title { font-size: 1.4rem; font-weight: 900; color: #1a202c; margin: 0; }
+
+.quiz-scenario {
+  border-left: 4px solid #FFD700;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.quiz-scenario__icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+.quiz-scenario__text { font-size: .95rem; line-height: 1.7; margin: 0; color: #333; }
+
+.quiz-state-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.quiz-state-box {
+  background: #fff; border-radius: 10px;
+  padding: 10px 16px; box-shadow: 0 1px 6px rgba(0,0,0,.08);
+  min-width: 90px; text-align: center; flex: 1;
+}
+.quiz-state-box--win { background: #fffbea; border: 2px solid #FFD700; flex: 2; }
+.quiz-state-label { font-size: .72rem; font-weight: 700; color: #888; margin-bottom: 2px; }
+.quiz-state-val { font-size: 1.3rem; font-weight: 900; color: #1a202c; line-height: 1.2; }
+.quiz-state-unit { font-size: .7rem; font-weight: 400; color: #888; margin-left: 2px; }
+.quiz-win-card { font-size: .95rem; }
+.quiz-win-count { font-size: .75rem; color: #856404; margin-left: 4px; }
+
+/* 選択肢ボタン */
+.quiz-choices { display: flex; flex-direction: column; gap: 10px; }
+.quiz-choice-btn {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: left;
+  width: 100%;
+}
+.quiz-choice-btn:hover:not(:disabled) {
+  border-color: #FFD700;
+  background: #fffbea;
+  transform: translateX(4px);
+  box-shadow: 0 3px 12px rgba(0,0,0,.1);
+}
+.quiz-choice-btn:disabled { cursor: default; opacity: .8; }
+.quiz-choice-btn--correct { border-color: #28a745 !important; background: #d4edda !important; }
+.quiz-choice-btn--wrong   { border-color: #dc3545 !important; background: #f8d7da !important; opacity: .9 !important; }
+.quiz-choice-btn__label {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #1a202c; color: #fff;
+  font-weight: 900; font-size: .9rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.quiz-choice-btn--correct .quiz-choice-btn__label { background: #28a745; }
+.quiz-choice-btn--wrong   .quiz-choice-btn__label { background: #dc3545; }
+.quiz-choice-btn__name { font-weight: 800; font-size: 1rem; color: #1a202c; flex: 1; }
+.quiz-choice-btn__memo { font-size: .78rem; color: #888; }
+
+/* 結果バナー */
+.quiz-result-banner { border-radius: 12px; overflow: hidden; }
+.quiz-banner-correct {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: #fff; font-weight: 800; font-size: 1.1rem;
+  padding: 16px 20px; border-radius: 12px;
+  text-align: center;
+}
+.quiz-banner-wrong {
+  background: linear-gradient(135deg, #dc3545, #e83e8c);
+  color: #fff; font-weight: 700; font-size: 1rem;
+  padding: 16px 20px; border-radius: 12px;
+  text-align: center; line-height: 1.6;
+}
+
+/* 確率比較バー */
+.quiz-prob-row { padding: 8px 0; border-radius: 8px; transition: background .15s; }
+.quiz-prob-row--correct { background: #f0fff4; padding: 8px 10px; border-radius: 8px; }
+.quiz-prob-row--chosen  { background: #fffbea; padding: 8px 10px; border-radius: 8px; }
+.quiz-prob-label {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 2px; flex-wrap: wrap;
+}
+.quiz-prob-choice-label {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #1a202c; color: #fff;
+  font-weight: 900; font-size: .8rem;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.quiz-prob-name { font-weight: 700; font-size: .95rem; }
+.quiz-prob-search-badge {
+  font-size: .65rem; font-weight: 700;
+  background: #cfe2ff; color: #084298;
+  padding: 1px 7px; border-radius: 50px;
+}
+.quiz-prob-correct-badge {
+  font-size: .72rem; font-weight: 700;
+  background: #d4edda; color: #155724;
+  padding: 1px 8px; border-radius: 50px;
+}
+.quiz-prob-detail { font-size: .75rem; color: #888; margin-bottom: 4px; }
+.quiz-prob-bar-wrap {
+  display: flex; align-items: center; gap: 8px;
+}
+.quiz-prob-bar {
+  height: 20px; border-radius: 50px;
+  transition: width .6s ease; min-width: 3px;
+  flex: 1;
+}
+.quiz-prob-pct { font-weight: 800; font-size: .95rem; min-width: 3.5em; text-align: right; }
+.quiz-prob-search-note { font-size: .75rem; color: #0d6efd; margin-top: 4px; }
+.quiz-explanation { font-size: .95rem; line-height: 1.75; color: #333; margin: 0; }
+
+/* ===== 結果カード コピー数ステッパー ===== */
+.result-card__copies {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.rc-copies-label {
+  font-size: .78rem;
+  color: #666;
+}
+.rc-copies-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f8f9fa;
+  font-size: .95rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  color: #333;
+  transition: background .12s;
+}
+.rc-copies-btn:hover { background: #e9ecef; }
+.rc-copies-val {
+  font-size: 1rem;
+  font-weight: 800;
+  min-width: 1.4em;
+  text-align: center;
+  color: #222;
+}
+.rc-copies-val.rc-copies-changed { color: #e53e3e; }
+.rc-copies-unit { font-size: .8rem; color: #555; }
+.rc-copies-orig { font-size: .72rem; }
+
+/* ===== 山札残り +/− 入力 ===== */
+.deck-remain-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.deck-remain-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 44px;
+  padding: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: 8px;
+}
+.deck-remain-input {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  font-size: 1.3rem !important;
+}
+
+/* ===== 先攻/後攻 選択 ===== */
+.sim-turn-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sim-turn-label {
+  font-size: .88rem;
+  font-weight: 700;
+  color: #444;
+  white-space: nowrap;
+}
+.sim-turn-group {
+  border-radius: 50px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,.12);
+}
+.sim-btn-turn {
+  font-size: .85rem;
+  font-weight: 700;
+  padding: 5px 18px;
+  border: 2px solid transparent;
+  transition: all .18s;
+}
+/* 先攻 */
+.sim-btn-first {
+  background: #f0f0f0;
+  color: #555;
+}
+.sim-btn-first.active {
+  background: linear-gradient(135deg, #e53e3e, #c53030);
+  color: #fff;
+  border-color: #c53030;
+}
+/* 後攻 */
+.sim-btn-second {
+  background: #f0f0f0;
+  color: #555;
+}
+.sim-btn-second.active {
+  background: linear-gradient(135deg, #2b6cb0, #1a56db);
+  color: #fff;
+  border-color: #1a56db;
+}
+.sim-turn-note {
+  font-size: .8rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* バトル開始後の先攻/後攻バッジ */
+.sim-turn-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 50px;
+  font-size: .8rem;
+  font-weight: 800;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.sim-turn-badge--first {
+  background: linear-gradient(135deg, #e53e3e, #c53030);
+  color: #fff;
+}
+.sim-turn-badge--second {
+  background: linear-gradient(135deg, #2b6cb0, #1a56db);
+  color: #fff;
+}
+
