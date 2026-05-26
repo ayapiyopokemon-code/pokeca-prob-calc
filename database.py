@@ -1,218 +1,102 @@
 import os
-import psycopg2
-import psycopg2.extras
-from contextlib import contextmanager
+from datetime import datetime, timezone
+from supabase import create_client
 
-DATABASE_URL = os.environ.get('DATABASE_URL', '')
-
-
-@contextmanager
-def get_db():
-    conn = psycopg2.connect(DATABASE_URL)
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
 
 
-def _cur(conn):
-    return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+def _sb():
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+def _now():
+    return datetime.now(timezone.utc).isoformat()
 
 
 def init_db():
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS decks (
-                    id         SERIAL PRIMARY KEY,
-                    name       TEXT NOT NULL DEFAULT '新しいデッキ',
-                    notes      TEXT DEFAULT '',
-                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS deck_cards (
-                    deck_id    INTEGER NOT NULL,
-                    card_id    TEXT NOT NULL,
-                    card_name  TEXT NOT NULL,
-                    quantity   INTEGER DEFAULT 1,
-                    supertype  TEXT DEFAULT '',
-                    subtypes   TEXT DEFAULT '',
-                    types      TEXT DEFAULT '',
-                    set_name   TEXT DEFAULT '',
-                    image_small TEXT DEFAULT '',
-                    PRIMARY KEY (deck_id, card_id),
-                    FOREIGN KEY (deck_id) REFERENCES decks(id) ON DELETE CASCADE
-                )
-            ''')
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS quiz_questions (
-                    id              SERIAL PRIMARY KEY,
-                    title           TEXT NOT NULL DEFAULT '新しい問題',
-                    scenario        TEXT NOT NULL DEFAULT '',
-                    deck_remaining  INTEGER DEFAULT 20,
-                    side_remaining  INTEGER DEFAULT 3,
-                    win_card_name   TEXT DEFAULT '',
-                    win_card_count  INTEGER DEFAULT 2,
-                    explanation     TEXT DEFAULT '',
-                    correct_choice  INTEGER DEFAULT 1,
-                    created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                    updated_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS quiz_choices (
-                    id           SERIAL PRIMARY KEY,
-                    question_id  INTEGER NOT NULL,
-                    choice_num   INTEGER NOT NULL,
-                    card_name    TEXT NOT NULL DEFAULT '',
-                    draw_count   INTEGER DEFAULT 3,
-                    is_search    INTEGER DEFAULT 0,
-                    memo         TEXT DEFAULT '',
-                    FOREIGN KEY (question_id) REFERENCES quiz_questions(id) ON DELETE CASCADE
-                )
-            ''')
+    pass  # Tables are created in Supabase dashboard
 
 
 # ---- Deck CRUD ----
 
 def get_all_decks():
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('''
-                SELECT d.*, COALESCE(SUM(dc.quantity), 0) AS card_count
-                FROM decks d
-                LEFT JOIN deck_cards dc ON d.id = dc.deck_id
-                GROUP BY d.id
-                ORDER BY d.updated_at DESC
-            ''')
-            return [dict(r) for r in cur.fetchall()]
+    result = _sb().table('decks').select('*, deck_cards(quantity)').order('updated_at', desc=True).execute()
+    decks = []
+    for d in result.data:
+        d['card_count'] = sum(c['quantity'] for c in (d.pop('deck_cards') or []))
+        decks.append(d)
+    return decks
 
 
 def get_deck(deck_id):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('SELECT * FROM decks WHERE id = %s', (deck_id,))
-            row = cur.fetchone()
-            return dict(row) if row else None
+    result = _sb().table('decks').select('*').eq('id', deck_id).execute()
+    return result.data[0] if result.data else None
 
 
 def create_deck(name='新しいデッキ'):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('INSERT INTO decks (name) VALUES (%s) RETURNING id', (name,))
-            return cur.fetchone()['id']
+    result = _sb().table('decks').insert({'name': name}).execute()
+    return result.data[0]['id']
 
 
 def rename_deck(deck_id, name):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute(
-                'UPDATE decks SET name = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s',
-                (name.strip() or '新しいデッキ', deck_id)
-            )
+    _sb().table('decks').update({
+        'name': name.strip() or '新しいデッキ',
+        'updated_at': _now(),
+    }).eq('id', deck_id).execute()
 
 
 def delete_deck(deck_id):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('DELETE FROM deck_cards WHERE deck_id = %s', (deck_id,))
-            cur.execute('DELETE FROM decks WHERE id = %s', (deck_id,))
+    _sb().table('deck_cards').delete().eq('deck_id', deck_id).execute()
+    _sb().table('decks').delete().eq('id', deck_id).execute()
 
 
 # ---- Card CRUD ----
 
 def get_deck_cards(deck_id):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('''
-                SELECT * FROM deck_cards
-                WHERE deck_id = %s
-                ORDER BY
-                    CASE supertype
-                        WHEN 'Pokémon' THEN 1
-                        WHEN 'Trainer' THEN 2
-                        WHEN 'Energy'  THEN 3
-                        ELSE 4
-                    END,
-                    card_name
-            ''', (deck_id,))
-            return [dict(r) for r in cur.fetchall()]
+    result = _sb().table('deck_cards').select('*').eq('deck_id', deck_id).execute()
+    order = {'Pokémon': 1, 'Trainer': 2, 'Energy': 3}
+    return sorted(result.data, key=lambda c: (order.get(c.get('supertype', ''), 4), c.get('card_name', '')))
 
 
 def get_deck_total(deck_id):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute(
-                'SELECT COALESCE(SUM(quantity), 0) AS total FROM deck_cards WHERE deck_id = %s',
-                (deck_id,)
-            )
-            return cur.fetchone()['total']
+    result = _sb().table('deck_cards').select('quantity').eq('deck_id', deck_id).execute()
+    return sum(c['quantity'] for c in result.data)
 
 
 def add_or_increment_card(deck_id, card_data):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute(
-                'SELECT quantity FROM deck_cards WHERE deck_id = %s AND card_id = %s',
-                (deck_id, card_data['id'])
-            )
-            row = cur.fetchone()
-            supertype = card_data.get('supertype', '')
-            max_qty = 60 if supertype == 'Energy' else 4
+    sb = _sb()
+    existing = sb.table('deck_cards').select('quantity').eq('deck_id', deck_id).eq('card_id', card_data['id']).execute()
+    supertype = card_data.get('supertype', '')
+    max_qty = 60 if supertype == 'Energy' else 4
 
-            if row:
-                new_qty = min(row['quantity'] + 1, max_qty)
-                cur.execute(
-                    'UPDATE deck_cards SET quantity = %s WHERE deck_id = %s AND card_id = %s',
-                    (new_qty, deck_id, card_data['id'])
-                )
-            else:
-                cur.execute('''
-                    INSERT INTO deck_cards
-                        (deck_id, card_id, card_name, supertype, subtypes, types, set_name, image_small)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ''', (
-                    deck_id,
-                    card_data['id'],
-                    card_data['name'],
-                    supertype,
-                    ','.join(card_data.get('subtypes', [])),
-                    ','.join(card_data.get('types', [])),
-                    card_data.get('set_name', ''),
-                    card_data.get('image_small', ''),
-                ))
-                new_qty = 1
+    if existing.data:
+        new_qty = min(existing.data[0]['quantity'] + 1, max_qty)
+        sb.table('deck_cards').update({'quantity': new_qty}).eq('deck_id', deck_id).eq('card_id', card_data['id']).execute()
+    else:
+        sb.table('deck_cards').insert({
+            'deck_id': deck_id,
+            'card_id': card_data['id'],
+            'card_name': card_data['name'],
+            'supertype': supertype,
+            'subtypes': ','.join(card_data.get('subtypes', [])),
+            'types': ','.join(card_data.get('types', [])),
+            'set_name': card_data.get('set_name', ''),
+            'image_small': card_data.get('image_small', ''),
+        }).execute()
+        new_qty = 1
 
-            cur.execute(
-                'UPDATE decks SET updated_at = CURRENT_TIMESTAMP WHERE id = %s',
-                (deck_id,)
-            )
-            return new_qty
+    sb.table('decks').update({'updated_at': _now()}).eq('id', deck_id).execute()
+    return new_qty
 
 
 def update_quantity(deck_id, card_id, quantity):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            if quantity <= 0:
-                cur.execute(
-                    'DELETE FROM deck_cards WHERE deck_id = %s AND card_id = %s',
-                    (deck_id, card_id)
-                )
-            else:
-                cur.execute(
-                    'UPDATE deck_cards SET quantity = %s WHERE deck_id = %s AND card_id = %s',
-                    (quantity, deck_id, card_id)
-                )
-            cur.execute(
-                'UPDATE decks SET updated_at = CURRENT_TIMESTAMP WHERE id = %s',
-                (deck_id,)
-            )
+    sb = _sb()
+    if quantity <= 0:
+        sb.table('deck_cards').delete().eq('deck_id', deck_id).eq('card_id', card_id).execute()
+    else:
+        sb.table('deck_cards').update({'quantity': quantity}).eq('deck_id', deck_id).eq('card_id', card_id).execute()
+    sb.table('decks').update({'updated_at': _now()}).eq('id', deck_id).execute()
 
 
 def remove_card(deck_id, card_id):
@@ -222,129 +106,96 @@ def remove_card(deck_id, card_id):
 # ---- Quiz CRUD ----
 
 def get_all_questions():
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('''
-                SELECT q.*, COUNT(c.id) AS choice_count
-                FROM quiz_questions q
-                LEFT JOIN quiz_choices c ON q.id = c.question_id
-                GROUP BY q.id
-                ORDER BY q.updated_at DESC
-            ''')
-            return [dict(r) for r in cur.fetchall()]
+    result = _sb().table('quiz_questions').select('*, quiz_choices(id)').order('updated_at', desc=True).execute()
+    questions = []
+    for q in result.data:
+        q['choice_count'] = len(q.pop('quiz_choices') or [])
+        questions.append(q)
+    return questions
 
 
 def get_question(question_id):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('SELECT * FROM quiz_questions WHERE id = %s', (question_id,))
-            row = cur.fetchone()
-            return dict(row) if row else None
+    result = _sb().table('quiz_questions').select('*').eq('id', question_id).execute()
+    return result.data[0] if result.data else None
 
 
 def get_choices(question_id):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute(
-                'SELECT * FROM quiz_choices WHERE question_id = %s ORDER BY choice_num',
-                (question_id,)
-            )
-            return [dict(r) for r in cur.fetchall()]
+    result = _sb().table('quiz_choices').select('*').eq('question_id', question_id).order('choice_num').execute()
+    return result.data
 
 
 def create_question(data):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('''
-                INSERT INTO quiz_questions
-                    (title, scenario, deck_remaining, side_remaining,
-                     win_card_name, win_card_count, explanation, correct_choice)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            ''', (
-                data.get('title', '新しい問題'),
-                data.get('scenario', ''),
-                int(data.get('deck_remaining', 20)),
-                int(data.get('side_remaining', 3)),
-                data.get('win_card_name', ''),
-                int(data.get('win_card_count', 1)),
-                data.get('explanation', ''),
-                int(data.get('correct_choice', 1)),
-            ))
-            qid = cur.fetchone()['id']
-            _save_choices(cur, qid, data.get('choices', []))
-            return qid
+    sb = _sb()
+    result = sb.table('quiz_questions').insert({
+        'title': data.get('title', '新しい問題'),
+        'scenario': data.get('scenario', ''),
+        'deck_remaining': int(data.get('deck_remaining', 20)),
+        'side_remaining': int(data.get('side_remaining', 3)),
+        'win_card_name': data.get('win_card_name', ''),
+        'win_card_count': int(data.get('win_card_count', 1)),
+        'explanation': data.get('explanation', ''),
+        'correct_choice': int(data.get('correct_choice', 1)),
+    }).execute()
+    qid = result.data[0]['id']
+    _save_choices(sb, qid, data.get('choices', []))
+    return qid
 
 
 def update_question(question_id, data):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('''
-                UPDATE quiz_questions SET
-                    title = %s, scenario = %s, deck_remaining = %s, side_remaining = %s,
-                    win_card_name = %s, win_card_count = %s, explanation = %s,
-                    correct_choice = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-            ''', (
-                data.get('title', '新しい問題'),
-                data.get('scenario', ''),
-                int(data.get('deck_remaining', 20)),
-                int(data.get('side_remaining', 3)),
-                data.get('win_card_name', ''),
-                int(data.get('win_card_count', 1)),
-                data.get('explanation', ''),
-                int(data.get('correct_choice', 1)),
-                question_id,
-            ))
-            cur.execute('DELETE FROM quiz_choices WHERE question_id = %s', (question_id,))
-            _save_choices(cur, question_id, data.get('choices', []))
+    sb = _sb()
+    sb.table('quiz_questions').update({
+        'title': data.get('title', '新しい問題'),
+        'scenario': data.get('scenario', ''),
+        'deck_remaining': int(data.get('deck_remaining', 20)),
+        'side_remaining': int(data.get('side_remaining', 3)),
+        'win_card_name': data.get('win_card_name', ''),
+        'win_card_count': int(data.get('win_card_count', 1)),
+        'explanation': data.get('explanation', ''),
+        'correct_choice': int(data.get('correct_choice', 1)),
+        'updated_at': _now(),
+    }).eq('id', question_id).execute()
+    sb.table('quiz_choices').delete().eq('question_id', question_id).execute()
+    _save_choices(sb, question_id, data.get('choices', []))
 
 
 def delete_question(question_id):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('DELETE FROM quiz_choices WHERE question_id = %s', (question_id,))
-            cur.execute('DELETE FROM quiz_questions WHERE id = %s', (question_id,))
+    sb = _sb()
+    sb.table('quiz_choices').delete().eq('question_id', question_id).execute()
+    sb.table('quiz_questions').delete().eq('id', question_id).execute()
 
 
-def _save_choices(cur, question_id, choices):
+def _save_choices(sb, question_id, choices):
+    rows = []
     for i, c in enumerate(choices, start=1):
         card_name = (c.get('card_name') or '').strip()
         if not card_name:
             continue
-        cur.execute('''
-            INSERT INTO quiz_choices (question_id, choice_num, card_name, draw_count, is_search, memo)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        ''', (
-            question_id, i,
-            card_name,
-            int(c.get('draw_count', 3)),
-            1 if c.get('is_search') else 0,
-            c.get('memo', ''),
-        ))
+        rows.append({
+            'question_id': question_id,
+            'choice_num': i,
+            'card_name': card_name,
+            'draw_count': int(c.get('draw_count', 3)),
+            'is_search': 1 if c.get('is_search') else 0,
+            'memo': c.get('memo', ''),
+        })
+    if rows:
+        sb.table('quiz_choices').insert(rows).execute()
 
 
 def bulk_add_cards(deck_id, cards):
-    with get_db() as conn:
-        with _cur(conn) as cur:
-            cur.execute('DELETE FROM deck_cards WHERE deck_id = %s', (deck_id,))
-            for c in cards:
-                cur.execute('''
-                    INSERT INTO deck_cards
-                        (deck_id, card_id, card_name, quantity, supertype, subtypes, types, set_name, image_small)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ''', (
-                    deck_id,
-                    c.get('id', c['card_name']),
-                    c['card_name'],
-                    int(c.get('quantity', 1)),
-                    c.get('supertype', ''),
-                    c.get('subtypes', ''),
-                    c.get('types', ''),
-                    c.get('set_name', ''),
-                    c.get('image_small', ''),
-                ))
-            cur.execute(
-                'UPDATE decks SET updated_at = CURRENT_TIMESTAMP WHERE id = %s',
-                (deck_id,)
-            )
+    sb = _sb()
+    sb.table('deck_cards').delete().eq('deck_id', deck_id).execute()
+    if cards:
+        rows = [{
+            'deck_id': deck_id,
+            'card_id': c.get('id', c['card_name']),
+            'card_name': c['card_name'],
+            'quantity': int(c.get('quantity', 1)),
+            'supertype': c.get('supertype', ''),
+            'subtypes': c.get('subtypes', ''),
+            'types': c.get('types', ''),
+            'set_name': c.get('set_name', ''),
+            'image_small': c.get('image_small', ''),
+        } for c in cards]
+        sb.table('deck_cards').insert(rows).execute()
+    sb.table('decks').update({'updated_at': _now()}).eq('id', deck_id).execute()
